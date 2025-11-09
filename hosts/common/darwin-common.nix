@@ -20,6 +20,9 @@ users.users.${username}.home = "/Users/${username}";
   nixpkgs = {
     config.allowUnfree = true;
     hostPlatform = lib.mkDefault "${system}";
+    overlays = [
+      inputs.nix-vscode-extensions.overlays.default
+    ];
   };
 
   environment.systemPackages = [
@@ -35,7 +38,7 @@ users.users.${username}.home = "/Users/${username}";
     # pkgs.lima
     # pkgs.nix
     # pkgs.nodejs
-    pkgs.vscode
+    # pkgs.vscode # <- managed by home-manager
     pkgs.slack
     # pkgs.pass
   ];

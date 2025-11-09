@@ -9,8 +9,10 @@
       enableExtensionUpdateCheck = true;
 
       # Extensions
-      extensions = (with pkgs.vscode-extensions; [
+      extensions = (with pkgs.vscode-marketplace; [
         esbenp.prettier-vscode
+        github.copilot
+        github.copilot-chat
       ]);
 
       userSettings = {

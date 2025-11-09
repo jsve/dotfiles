@@ -15,6 +15,9 @@
 
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs-darwin";
+
+    nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
+    mac-app-util.url = "github:hraban/mac-app-util";
   };
 
   outputs = { ... }@inputs:
