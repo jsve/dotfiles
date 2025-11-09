@@ -1,7 +1,7 @@
 { pkgs, ... }:
 {
   programs.vscode = {
-    enable = false; # ← Don't install, just configure
+    enable = true;
     mutableExtensionsDir = true;
 
     profiles.default = {
