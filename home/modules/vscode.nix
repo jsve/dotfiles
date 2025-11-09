@@ -1,10 +1,12 @@
 { pkgs, ... }:
 {
-    programs.vscode = {
-      enable = false; # ← Don't install, just configure
+  programs.vscode = {
+    enable = false; # ← Don't install, just configure
+    mutableExtensionsDir = true;
+
+    profiles.default = {
       enableUpdateCheck = true;
       enableExtensionUpdateCheck = true;
-      mutableExtensionsDir = true;
 
       # Extensions
       extensions = (with pkgs.vscode-extensions; [
@@ -23,5 +25,6 @@
         # "[markdown]"."files.trimTrailingWhitespace" = false;
         # "[env]"."editor.formatOnSave" = false;
       };
-    };
+    }
+  };
 }
