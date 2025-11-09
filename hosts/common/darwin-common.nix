@@ -147,6 +147,7 @@ users.users.${username}.home = "/Users/${username}";
     NSGlobalDomain.InitialKeyRepeat = 25;
     NSGlobalDomain.KeyRepeat = 2;
     NSGlobalDomain."com.apple.mouse.tapBehavior" = null; # null = tap to click disabled
+    NSGlobalDomain."com.apple.swipescrolldirection" = false;  # Disable "natural" scrolling
     NSGlobalDomain.NSWindowShouldDragOnGesture = true; # cmd + control + drag to move window
     NSGlobalDomain.NSAutomaticSpellingCorrectionEnabled = false;
     # LaunchServices.LSQuarantine = false; # disables "Are you sure?" for new apps
