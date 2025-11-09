@@ -6,6 +6,7 @@
     programs.home-manager.enable = true;
 
     imports = [
+
     ];
 
     home.packages = with pkgs; [
@@ -22,7 +23,7 @@
       # steam <- managed by homebrew
 
       # Communication
-      slack
+      # slack
     ];
 
 }

@@ -35,6 +35,8 @@ users.users.${username}.home = "/Users/${username}";
     # pkgs.lima
     # pkgs.nix
     # pkgs.nodejs
+    pkgs.vscode
+    pkgs.slack
     # pkgs.pass
   ];
 
@@ -75,16 +77,13 @@ users.users.${username}.home = "/Users/${username}";
     };
     global.autoUpdate = true;
 
-    brews = [
-      # "bitwarden-cli"
-      # "neovim" <- managed by home-manager
-      # "ollama"
-      # "tailscale"
-      # "borders"
-    ];
-    taps = [
-      #"FelixKratz/formulae" #sketchybar
-    ];
+    # brews = [
+    #   # "bitwarden-cli"
+    #   # "neovim" <- managed by home-manager
+    #   # "ollama"
+    #   # "tailscale"
+    #   # "borders"
+    # ];
     casks = [
       "1password"
       "ghostty"
@@ -98,37 +97,37 @@ users.users.${username}.home = "/Users/${username}";
       # "slack" <- managed by home-manager
       "steam"
       # "wireshark"
-      "visual-studio-code"
+      # "visual-studio-code" <- managed by home-manager
       "vlc"
     ];
-    masApps = {
-      # "Amphetamine" = 937984704;
-      # "AutoMounter" = 1160435653;
-      # "Bitwarden" = 1352778147;
-      # "Creator's Best Friend" = 1524172135;
-      # "DaVinci Resolve" = 571213070;
-      # "Disk Speed Test" = 425264550;
-      # "Fantastical" = 975937182;
-      # "Ivory for Mastodon by Tapbots" = 6444602274;
-      # "Home Assistant Companion" = 1099568401;
-      # "Microsoft Remote Desktop" = 1295203466;
-      # "Perplexity" = 6714467650;
-      # "Resize Master" = 1025306797;
-      # "rCmd" = 1596283165;
-      # "Snippety" = 1530751461;
-      # "Tailscale" = 1475387142;
-      # "Telegram" = 747648890;
-      # "The Unarchiver" = 425424353;
-      # "Todoist" = 585829637;
-      # "UTM" = 1538878817;
-      # "Wireguard" = 1451685025;
+    # masApps = {
+    #   # "Amphetamine" = 937984704;
+    #   # "AutoMounter" = 1160435653;
+    #   # "Bitwarden" = 1352778147;
+    #   # "Creator's Best Friend" = 1524172135;
+    #   # "DaVinci Resolve" = 571213070;
+    #   # "Disk Speed Test" = 425264550;
+    #   # "Fantastical" = 975937182;
+    #   # "Ivory for Mastodon by Tapbots" = 6444602274;
+    #   # "Home Assistant Companion" = 1099568401;
+    #   # "Microsoft Remote Desktop" = 1295203466;
+    #   # "Perplexity" = 6714467650;
+    #   # "Resize Master" = 1025306797;
+    #   # "rCmd" = 1596283165;
+    #   # "Snippety" = 1530751461;
+    #   # "Tailscale" = 1475387142;
+    #   # "Telegram" = 747648890;
+    #   # "The Unarchiver" = 425424353;
+    #   # "Todoist" = 585829637;
+    #   # "UTM" = 1538878817;
+    #   # "Wireguard" = 1451685025;
 
-      # "Final Cut Pro" = 424389933;
+    #   # "Final Cut Pro" = 424389933;
 
-      # "Keynote" = 409183694;
-      # "Numbers" = 409203825;
-      # "Pages" = 409201541;
-    };
+    #   # "Keynote" = 409183694;
+    #   # "Numbers" = 409203825;
+    #   # "Pages" = 409201541;
+    # };
   };
 
   # Add ability to used TouchID for sudo authentication
