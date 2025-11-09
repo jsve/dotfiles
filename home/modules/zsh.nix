@@ -23,6 +23,11 @@
       theme = "robbyrussell";
     };
 
+    profileExtra = ''
+      eval "$(zoxide init zsh)"
+    '';
+
+
     plugins = [
       {
         name = "nix-shell";
