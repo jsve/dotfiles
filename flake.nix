@@ -17,7 +17,12 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs-darwin";
 
     nix-vscode-extensions.url = "github:nix-community/nix-vscode-extensions";
-    mac-app-util.url = "github:hraban/mac-app-util";
+    mac-app-util = {
+      # temp fix from https://github.com/hraban/mac-app-util/issues/39
+      url = "github:hraban/mac-app-util";
+      inputs.cl-nix-lite.url = "github:r4v3n6101/cl-nix-lite/url-fix";
+    };
+
   };
 
   outputs = { ... }@inputs:
