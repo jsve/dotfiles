@@ -6,7 +6,7 @@
     programs.home-manager.enable = true;
 
     imports = [
-      "./modules/vscode.nix"
+      ./modules/vscode.nix
     ];
 
     home.packages = with pkgs; [
