@@ -25,6 +25,6 @@
         # "[markdown]"."files.trimTrailingWhitespace" = false;
         # "[env]"."editor.formatOnSave" = false;
       };
-    }
+    };
   };
 }
