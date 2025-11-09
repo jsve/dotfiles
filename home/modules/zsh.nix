@@ -20,7 +20,7 @@
         "kubectl"
         "docker"
       ];
-      custom = "$HOME/.oh-my-custom";
+      theme = "robbyrussell";
     };
 
     plugins = [
