@@ -54,6 +54,7 @@
         # IDE
         # "files.trimTrailingWhitespace" = true;
         "editor.formatOnSave" = true;
+        "aws.telemetry" = false;
         # "explorer.confirmDragAndDrop" = false;
 
         # # Misc
