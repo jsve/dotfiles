@@ -9,7 +9,7 @@
       enableExtensionUpdateCheck = true;
 
       # Extensions
-      extensions = (with pkgs.vscode-marketplace; [
+      extensions = (with pkgs.vscode-marketplace-release; [
         esbenp.prettier-vscode
         github.copilot
         github.copilot-chat
