@@ -54,7 +54,11 @@
         # IDE
         # "files.trimTrailingWhitespace" = true;
         "editor.formatOnSave" = true;
+
+        # TELEMETRY
         "aws.telemetry" = false;
+        "telemetry.editStats.enabled" = false;
+        "gitlens.telemetry.enabled" = false;
         # "explorer.confirmDragAndDrop" = false;
 
         # # Misc
