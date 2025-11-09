@@ -87,7 +87,7 @@ users.users.${username}.home = "/Users/${username}";
     ];
     casks = [
       "1password"
-      # "ghostty" <- managed by home-manager
+      "ghostty"
       "google-chrome"
       # "karabiner-elements"
       "lm-studio"

@@ -12,10 +12,15 @@ curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix 
 > [!CAUTION]
 > If you want to proceed with nix-darwin after installing Nix: Please be prepared to answer with “no” when the determinate installer asks if you want to install Determinate Nix. As of today, Determinate Nix does not work well in combination with nix-darwin. For more information please refer to the nix-darwin README.
 
-### homebrew
 
+Install [Homebrew](https://brew.sh/) (if not already installed):
 ```
-curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+Use nix to build nix (we need just for that):
+```
+nix --extra-experimental-features 'nix-command flakes' run nixpkgs#just -- switch
 ```
 
 ## Stuff to remember

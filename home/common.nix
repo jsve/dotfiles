@@ -16,7 +16,7 @@
       openssl
       opencode
       orbstack
-      ghostty
+      # ghostty <- managed by homebrew
 
       # Entertainment
       # steam <- managed by homebrew
