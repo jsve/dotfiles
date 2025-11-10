@@ -59,6 +59,7 @@
         "aws.telemetry" = false;
         "telemetry.editStats.enabled" = false;
         "gitlens.telemetry.enabled" = false;
+        "telemetry.feedback.enabled" = false;
         # "explorer.confirmDragAndDrop" = false;
 
         # # Misc
