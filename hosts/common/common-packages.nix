@@ -1,4 +1,9 @@
-{ inputs, pkgs, unstablePkgs, ... }:
+{
+  inputs,
+  pkgs,
+  unstablePkgs,
+  ...
+}:
 let
   inherit (inputs) nixpkgs nixpkgs-unstable;
 in
@@ -35,6 +40,7 @@ in
     # mc
     # mosh
     # nmap
+    nodejs
     # opencode <- managed in home-manager
     # qemu
     # ripgrep
