@@ -14,13 +14,14 @@ in
     # act
     # ansible
     # btop
-    coreutils
+    coreutils # GNU core utils
     # diffr # Modern Unix `diff`
     # difftastic # Modern Unix `diff`
     # drill
     # dust # Modern Unix `du`
     # dua # Modern Unix `du`
     # duf # Modern Unix `df`
+    direnv # <- managed in home-manager
     # entr # Modern Unix `watch`
     # esptool
     # fastfetch
@@ -40,7 +41,7 @@ in
     # mc
     # mosh
     # nmap
-    nodejs
+    # nodejs <- conflicts with whatever is installed in home-manager
     # opencode <- managed in home-manager
     # qemu
     # ripgrep

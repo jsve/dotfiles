@@ -8,11 +8,12 @@
   imports = [
     ./modules/vscode.nix
     ./modules/zsh.nix
+    ./modules/direnv.nix
   ];
 
   home.packages = with pkgs; [
     # Haxx
-    bruno
+    # bruno # installs it's own version of node. don't use it for now.
     gh
     neovim
     openssl
@@ -22,8 +23,9 @@
     # ch:
     nodejs_20
     python310
-    yarn
     pnpm_8
+    # yarn # installs it's own version of node. don't use it for now.
+    # pnpm_8 # installs it's own version of node. don't use it for now.
 
     # managed by homebrew
     # ghostty
