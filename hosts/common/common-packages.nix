@@ -21,7 +21,7 @@ in
     # dust # Modern Unix `du`
     # dua # Modern Unix `du`
     # duf # Modern Unix `df`
-    direnv # <- managed in home-manager
+    # direnv <- managed in home-manager
     # entr # Modern Unix `watch`
     # esptool
     # fastfetch
