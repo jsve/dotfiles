@@ -58,12 +58,18 @@
         # "files.trimTrailingWhitespace" = true;
         "editor.formatOnSave" = true;
 
+        #CH
+        "eslint.format.enable" = true;
+        "typescript.format.enable" = false;
+        "[javascript]"."editor.defaultFormatter" = "dbaeumer.vscode-eslint";
+
         # TELEMETRY
         "aws.telemetry" = false;
         "telemetry.editStats.enabled" = false;
         "gitlens.telemetry.enabled" = false;
         "telemetry.feedback.enabled" = false;
         "redhat.telemetry.enabled" = false;
+        "stripe.telemetry.enabled" = false;
 
         # "explorer.confirmDragAndDrop" = false;
 
