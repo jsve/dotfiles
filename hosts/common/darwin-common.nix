@@ -106,6 +106,7 @@ in
       "google-chrome"
       # "karabiner-elements"
       "lm-studio"
+      "microsoft-excel"
       # "notion"
       # "obsidian"
       # "orbstack" <- managed by home-manager
