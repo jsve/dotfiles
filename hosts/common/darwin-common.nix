@@ -107,6 +107,7 @@ in
       # "karabiner-elements"
       "lm-studio"
       "microsoft-excel"
+      "mongodb-compass"
       # "notion"
       # "obsidian"
       # "orbstack" <- managed by home-manager
