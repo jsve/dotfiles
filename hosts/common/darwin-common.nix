@@ -105,6 +105,7 @@ in
       "ghostty"
       "google-chrome"
       # "karabiner-elements"
+      "fluor"
       "lm-studio"
       "microsoft-excel"
       "mongodb-compass"
