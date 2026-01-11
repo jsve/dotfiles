@@ -65,3 +65,11 @@ sudo dnf copr enable lionheartp/Hyprland
 sudo dnf distro-sync
 sudo dnf upgrade --refresh
 ``` 
+
+instead, and then again
+
+```
+sudo dnf install hyprland sddm tuned tuned-ppd kitty waybar hyprpolkitagent nautilus pavucontrol alsa-sof-firmware alsa-utils blueman NetworkManager-wifi iwl* nm-connection-editor-desktop gvfs gvfs-mtp
+```
+
+this guide has some claims about gnome and hyprland: https://dev.to/renhiyama/how-to-dualboot-hyprland-with-gnome-desktops-on-linux-1pa4
