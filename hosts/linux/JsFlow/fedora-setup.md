@@ -73,3 +73,37 @@ sudo dnf install hyprland sddm tuned tuned-ppd kitty waybar hyprpolkitagent naut
 ```
 
 this guide has some claims about gnome and hyprland: https://dev.to/renhiyama/how-to-dualboot-hyprland-with-gnome-desktops-on-linux-1pa4
+
+looks like:
+ - we dont need sddm.
+ - we don't need polkit-gnome. hyprpolkitagent seems fine
+
+ back to OG guide:
+ 
+ update hyprland config to have this in autostart:
+
+```
+exec-once = $terminal
+exec-once = waybar
+exec-once = systemctl --user start hyprpolkitagent
+```
+
+## Addon rabbit holes
+
+add walker though
+
+```
+sudo dnf copr enable errornointernet/walker
+sudo dnf install walker
+```
+
+install elephant from source https://github.com/abenz1267/elephant
+
+add go to path in bashrc: export PATH="$HOME/go/bin:$PATH"
+
+
+
+TODO: find out how to start walker properly
+TODO: find a way to boot back into gnome
+TODO: find out what to do with uwsm
+TODO: gnome apps look shitty. what to do?
