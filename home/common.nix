@@ -18,7 +18,6 @@
     neovim
     openssl
     opencode
-    orbstack
 
     # ch:
     nodejs_20

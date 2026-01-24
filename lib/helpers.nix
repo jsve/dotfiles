@@ -48,6 +48,7 @@
           home-manager.users.${username} = {
             imports = [
               ./../home/common.nix
+              ./../home/darwin-common.nix
             ]
             ++ lib.optionals (builtins.pathExists ./../home/${username}.nix) [
               ./../home/${username}.nix
@@ -81,6 +82,7 @@
     }:
     let
       inherit (inputs.nixpkgs) lib;
+      pkgs = inputs.nixpkgs.legacyPackages.${system};
       unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
       customConfPath = ./../hosts/linux/${hostname};
       customConf =
@@ -90,7 +92,8 @@
           ./../hosts/common/linux-common.nix;
     in
     inputs.home-manager.lib.homeManagerConfiguration {
-      specialArgs = {
+      inherit pkgs;
+      extraSpecialArgs = {
         inherit
           system
           inputs
@@ -99,26 +102,17 @@
           ;
       };
       modules = [
-        ../hosts/common/common-packages.nix
-        ../hosts/common/linux-common.nix
-        customConf
-        inputs.home-manager.modules.home-manager
         {
-          networking.hostName = hostname;
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-          home-manager.backupFileExtension = "backup";
-          home-manager.extraSpecialArgs = { inherit inputs; };
-          home-manager.sharedModules = [ ];
-          home-manager.users.${username} = {
-            imports = [
-              ./../home/common.nix
-            ]
-            ++ lib.optionals (builtins.pathExists ./../home/${username}.nix) [
-              ./../home/${username}.nix
-            ];
+          nixpkgs.config.allowUnfree = true;
+          home = {
+            inherit username stateVersion;
+            homeDirectory = "/home/${username}";
           };
         }
+        ./../home/common.nix
+      ]
+      ++ lib.optionals (builtins.pathExists ./../home/${username}.nix) [
+        ./../home/${username}.nix
       ];
     };
 
