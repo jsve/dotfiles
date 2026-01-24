@@ -100,6 +100,15 @@ sudo dnf install walker
 install elephant from source https://github.com/abenz1267/elephant
 
 add go to path in bashrc: export PATH="$HOME/go/bin:$PATH"
+add service with elephant service enable
+
+modify the service unit via `systemctl --user edit elephant.service` to have:
+
+```
+[Service]
+ExecStart=
+ExecStart=%h/go/bin/elephant
+```
 
 
 
