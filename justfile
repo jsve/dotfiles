@@ -23,15 +23,16 @@ switch target_host=hostname: (build target_host)
   @echo "switching to new config for {{target_host}}"
   sudo ./result/sw/bin/darwin-rebuild switch --flake ".#{{target_host}}"
 
+# Activate a nix shell with latest home-manager from github
+# nix shell github:nix-community/home-manager
+# nix build ".#homeConfigurations.{{target_host}}.activationPackage" {{flags}}
+
 ### linux
 # Build the home-manager configuration without switching to it (Fedora/non-NixOS)
 [group('nix')]
 [linux]
 build target_host=hostname flags="":
-# Activate a nix shell with latest home-manager from github
 	@echo "Building home-manager config..."
-# nix shell github:nix-community/home-manager
-# nix build ".#homeConfigurations.{{target_host}}.activationPackage" {{flags}}
   nix --extra-experimental-features 'nix-command flakes'  build ".#linuxConfigurations.{{target_host}}.activationPackage" {{flags}}
 
 # Build the home-manager config with the --show-trace flag set
