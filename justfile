@@ -32,7 +32,7 @@ switch target_host=hostname: (build target_host)
 [group('nix')]
 [linux]
 build target_host=hostname flags="":
-	@echo "Building home-manager config..."
+  @echo "Building home-manager config..."
   nix --extra-experimental-features 'nix-command flakes'  build ".#linuxConfigurations.{{target_host}}.activationPackage" {{flags}}
 
 # Build the home-manager config with the --show-trace flag set
