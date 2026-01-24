@@ -25,7 +25,7 @@ in
     if [ "$SHELL" != "$zsh_path" ]; then
       # First ensure zsh is in /etc/shells
       if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
-        $DRY_RUN_CMD echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null || {
+        $DRY_RUN_CMD echo "$zsh_path" | /usr/bin/sudo tee -a /etc/shells >/dev/null || {
           echo "Failed to add zsh to /etc/shells. Run manually: echo $zsh_path | sudo tee -a /etc/shells" >&2
           exit 1
         }
