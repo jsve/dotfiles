@@ -21,9 +21,8 @@ in
   # Reference: https://wiki.nixos.org/wiki/Command_Shell#Changing_the_default_shell
   home.activation.setDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     zsh_path="${pkgs.zsh}/bin/zsh"
-    current_shell=$(getent passwd "$USER" | cut -d: -f7)
 
-    if [ "$current_shell" != "$zsh_path" ]; then
+    if [ "$SHELL" != "$zsh_path" ]; then
       # First ensure zsh is in /etc/shells
       if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
         $DRY_RUN_CMD echo "$zsh_path" | sudo tee -a /etc/shells >/dev/null || {
