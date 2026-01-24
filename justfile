@@ -28,8 +28,11 @@ switch target_host=hostname: (build target_host)
 [group('nix')]
 [linux]
 build target_host=hostname flags="":
+# Activate a nix shell with latest home-manager from github
 	@echo "Building home-manager config..."
-	nix build ".#homeConfigurations.{{target_host}}.activationPackage" {{flags}}
+# nix shell github:nix-community/home-manager
+# nix build ".#homeConfigurations.{{target_host}}.activationPackage" {{flags}}
+  nix --extra-experimental-features 'nix-command flakes'  build ".#linuxConfigurations.{{target_host}}.activationPackage" {{flags}}
 
 # Build the home-manager config with the --show-trace flag set
 [group('nix')]

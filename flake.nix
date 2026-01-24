@@ -55,6 +55,13 @@
           username = "chblackbook";
         };
       };
+
+      linuxConfigurations = {
+        JsFlowdora = libx.mkLinux {
+          hostname = "JsFlowdora";
+          username = "johan";
+        };
+      }
     };
 
 }
