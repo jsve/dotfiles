@@ -19,7 +19,7 @@
         if builtins.pathExists (customConfPath) then
           (customConfPath + "/default.nix")
         else
-          ./../hosts/common/darwin-common-dock.nix;
+          ./../hosts/common/darwin-dock.nix;
     in
     inputs.nix-darwin.lib.darwinSystem {
       specialArgs = {
@@ -31,8 +31,8 @@
           ;
       };
       modules = [
-        ../hosts/common/common-packages.nix
-        ../hosts/common/darwin-common.nix
+        ../hosts/common/system-packages.nix
+        ../hosts/common/darwin-system.nix
         customConf
         inputs.mac-app-util.darwinModules.default
         inputs.home-manager.darwinModules.home-manager
@@ -110,6 +110,7 @@
           };
         }
         ./../home/common.nix
+        ./../home/linux-common.nix
       ]
       ++ lib.optionals (builtins.pathExists ./../home/${username}.nix) [
         ./../home/${username}.nix

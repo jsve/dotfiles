@@ -30,7 +30,64 @@ nix-shell -p just
 just build
 ```
 
+## Repository Structure
 
+This repository manages system and user configurations across macOS (via nix-darwin) and Linux (via standalone home-manager on Fedora). The structure is designed to share common configurations while allowing platform-specific customizations.
+
+### Directory Layout
+
+```
+├── flake.nix                    # Main flake configuration defining systems
+├── justfile                     # Task runner with build, switch, and utility commands
+├── lib/
+│   └── helpers.nix              # mkDarwin and mkLinux functions for system configs
+├── hosts/
+│   ├── common/
+│   │   ├── system-packages-list.nix  # Shared package list (system-level on darwin/nixos, user-level on fedora)
+│   │   ├── system-packages.nix       # Wrapper for environment.systemPackages (darwin/nixos only)
+│   │   ├── darwin-system.nix         # nix-darwin specific system config (homebrew, system settings)
+│   │   └── darwin-dock.nix           # Default dock configuration for darwin
+│   ├── darwin/
+│   │   └── <hostname>/               # Host-specific darwin overrides
+│   └── linux/
+│       └── <hostname>/               # Host-specific linux overrides
+└── home/
+    ├── common.nix               # Shared home-manager config (user packages, programs)
+    ├── darwin-common.nix        # Darwin-specific home-manager config
+    ├── linux-common.nix         # Linux-specific home-manager config (imports system-packages-list)
+    └── modules/
+        ├── direnv.nix
+        ├── vscode.nix
+        └── zsh.nix
+```
+
+### How It Works
+
+**macOS (nix-darwin):**
+- System-level packages via `environment.systemPackages` (from `system-packages-list.nix`)
+- System configuration (homebrew, system settings) in `darwin-system.nix`
+- User packages and programs in `home/common.nix`
+- Uses nix-darwin integration for seamless system/user management
+
+**Linux/Fedora (standalone home-manager):**
+- No system-level package management (no `environment.systemPackages`)
+- Imports `system-packages-list.nix` into `home.packages` (user-level installation)
+- Requires explicit PATH setup via `systemd.user.sessionVariables`
+- Everything managed at user-level through home-manager
+
+**Shared Configuration:**
+- `system-packages-list.nix` defines packages once, used differently per platform
+- `home/common.nix` contains cross-platform user configuration
+- Platform-specific configs in `darwin-common.nix` and `linux-common.nix`
+
+### Key Commands
+
+```bash
+just build            # Build configuration without switching
+just switch           # Build and activate configuration
+just update           # Update flake inputs
+just gc               # Run garbage collection
+```
 
 ## Stuff to remember
 

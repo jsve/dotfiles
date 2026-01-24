@@ -1,4 +1,9 @@
-{ pkgs, config, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
 {
   programs.zsh = {
     enable = true;
@@ -26,7 +31,6 @@
     profileExtra = ''
       eval "$(zoxide init zsh)"
     '';
-
 
     plugins = [
       {

@@ -23,9 +23,6 @@ switch target_host=hostname: (build target_host)
   @echo "switching to new config for {{target_host}}"
   sudo ./result/sw/bin/darwin-rebuild switch --flake ".#{{target_host}}"
 
-# Activate a nix shell with latest home-manager from github
-# nix shell github:nix-community/home-manager
-# nix build ".#homeConfigurations.{{target_host}}.activationPackage" {{flags}}
 
 ### linux
 # Build the home-manager configuration without switching to it (Fedora/non-NixOS)
@@ -43,9 +40,9 @@ trace target_host=hostname: (build target_host "--show-trace")
 # Build the home-manager configuration and switch to it (Fedora/non-NixOS)
 [group('nix')]
 [linux]
-switch target_host=hostname:
-  @echo "Switching to new home-manager config for {{target_host}}"
-  nix run . -- switch --flake ".#{{target_host}}"
+switch target_host=hostname: (build target_host)
+  @echo "switching to new config for {{target_host}}"
+  ./result/activate
 
 ## NixOS specific (commented out)
 # Build the NixOS configuration without switching to it

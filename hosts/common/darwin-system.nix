@@ -1,3 +1,5 @@
+# nix-darwin system-level configuration
+# Used for macOS system settings, homebrew, fonts, and system packages
 {
   inputs,
   outputs,
@@ -235,7 +237,7 @@ in
       SortDirection = 0;
     };
     "com.apple.Safari" = {
-      # Privacy: don’t send search queries to Apple
+      # Privacy: don't send search queries to Apple
       UniversalSearchEnabled = false;
       SuppressSearchSuggestions = true;
     };

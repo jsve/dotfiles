@@ -11,6 +11,10 @@
     ./modules/direnv.nix
   ];
 
+  systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
+    PATH = "$HOME/.nix-profile/bin:$PATH";
+  };
+
   home.packages = with pkgs; [
     # Haxx
     # bruno # installs it's own version of node. don't use it for now.
