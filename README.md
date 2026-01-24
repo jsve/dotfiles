@@ -23,6 +23,13 @@ Use nix to build nix (we need just for that):
 nix --extra-experimental-features 'nix-command flakes' run nixpkgs#just -- switch
 ```
 
+or:
+
+```
+nix-shell -p just
+just build
+```
+
 
 
 ## Stuff to remember

@@ -88,7 +88,7 @@ exec-once = waybar
 exec-once = systemctl --user start hyprpolkitagent
 ```
 
-## Addon rabbit holes
+### Addon rabbit holes
 
 add walker though
 
@@ -107,3 +107,7 @@ TODO: find out how to start walker properly
 TODO: find a way to boot back into gnome
 TODO: find out what to do with uwsm
 TODO: gnome apps look shitty. what to do?
+
+### Gnome/hyprland compat
+
+add to ~/.vscode/argv.json -> "password-store": "gnome-libsecret"
