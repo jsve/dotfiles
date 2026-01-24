@@ -81,12 +81,34 @@ gc:
   nix-collect-garbage --delete-older-than 7d
   nix-store --gc
 
-# bootstrap darwin system
+# Bootstrap darwin system
 [group('nix')]
 [macos]
 bootstrap:
   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
 # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Set zsh as the default shell (Linux only)
+# This adds the nix-installed zsh to /etc/shells and changes your default shell
+# You'll need to log out and back in after running this for the change to take effect
+[group('nix')]
+[linux]
+setup-shell:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  ZSH_PATH="$(readlink -f ~/.nix-profile/bin/zsh)"
+  if [ "$SHELL" != "$ZSH_PATH" ]; then
+    echo "Setting up zsh as default shell..."
+    if ! grep -qx "$ZSH_PATH" /etc/shells 2>/dev/null; then
+      echo "Adding $ZSH_PATH to /etc/shells (sudo required)"
+      echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
+    fi
+    echo "Changing default shell to zsh"
+    chsh -s "$ZSH_PATH"
+    echo "✓ Default shell changed to zsh. Please log out and back in."
+  else
+    echo "✓ Zsh is already your default shell"
+  fi
 
 
 ## manual command for initial bootstrapping

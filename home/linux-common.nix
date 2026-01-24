@@ -17,27 +17,15 @@ in
   # Install the shared package list at user-level
   home.packages = packageList;
 
-  # Set zsh as default shell on Fedora
+  # Check if zsh is the default shell and inform user how to set it up
   # Reference: https://wiki.nixos.org/wiki/Command_Shell#Changing_the_default_shell
-  home.activation.setDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+  home.activation.checkDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
     zsh_path="${pkgs.zsh}/bin/zsh"
-
     if [ "$SHELL" != "$zsh_path" ]; then
-      # First ensure zsh is in /etc/shells
-      if ! grep -qx "$zsh_path" /etc/shells 2>/dev/null; then
-        $DRY_RUN_CMD echo "$zsh_path" | /usr/bin/sudo tee -a /etc/shells >/dev/null || {
-          echo "Failed to add zsh to /etc/shells. Run manually: echo $zsh_path | sudo tee -a /etc/shells" >&2
-          exit 1
-        }
-      fi
-      
-      # Change the default shell
-      $DRY_RUN_CMD chsh -s "$zsh_path" || {
-        echo "Failed to change default shell. Run manually: chsh -s $zsh_path" >&2
-        exit 1
-      }
-      
-      echo "Default shell changed to zsh. Please log out and back in."
+      echo ""
+      echo "ℹ️  Zsh is not your default shell yet."
+      echo "   Run: just setup-shell"
+      echo ""
     fi
   '';
 }
