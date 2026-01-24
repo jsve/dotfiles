@@ -61,7 +61,7 @@
           hostname = "JsFlowdora";
           username = "johan";
         };
-      }
+      };
     };
 
 }
