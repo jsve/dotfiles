@@ -54,6 +54,11 @@ in
   # Install the shared package list at user-level
   home.packages = packageList ++ regularGuiPackages ++ openglGuiPackages;
 
+  # Ensure GNOME/systemd user session has correct PATH for nix packages
+  xdg.configFile."environment.d/envvars.conf".text = ''
+    PATH="$HOME/.nix-profile/bin:$PATH"
+  '';
+
   # Check if zsh is the default shell and inform user how to set it up
   # Reference: https://wiki.nixos.org/wiki/Command_Shell#Changing_the_default_shell
   home.activation.checkDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
