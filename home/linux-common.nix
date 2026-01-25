@@ -51,6 +51,25 @@ in
     PATH = "$HOME/.nix-profile/bin:$PATH";
   };
 
+  # Enable systemd services from packages (home-manager PR #8540)
+  # This makes D-Bus activation work properly for GUI apps.
+  #
+  # Without this, apps with DBusActivatable=true in their .desktop files (like Ghostty)
+  # would fail to launch from the GNOME app launcher with the error:
+  #   "Activation request for 'com.example.app' failed: 
+  #    The systemd unit 'app-com.example.app.service' could not be found."
+  #
+  # The issue occurs because:
+  # - The app works fine when launched from terminal (direct binary execution)
+  # - But fails from GNOME app launcher (uses D-Bus activation via systemd)
+  # - systemd doesn't search ~/.nix-profile/share/systemd/user/ for service files
+  # - This option symlinks services to ~/.local/share/systemd/user/ where systemd looks
+  #
+  # Debug commands:
+  #   journalctl --user -n 200 | grep -i "app-name"
+  #   systemctl --user status app-com.example.app.service
+  systemd.user.packages = openglGuiPackages ++ regularGuiPackages;
+
   # Install the shared package list at user-level
   home.packages = packageList ++ regularGuiPackages ++ openglGuiPackages;
 
