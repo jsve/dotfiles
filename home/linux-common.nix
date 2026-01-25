@@ -45,17 +45,38 @@ in
     defaultWrapper = "mesa"; # Use mesa for most systems, change to "nvidia" if using NVIDIA GPU
   };
 
-  # Make packages available system-wide via systemd user session
-  # Required because standalone home-manager doesn't auto-configure PATH like nix-darwin does
+  # Configure environment variables for systemd user session and all user processes
   #
-  # CRITICAL: Also set XDG_DATA_DIRS so GNOME can find desktop entries and icons.
-  # The Nix installer's nix-daemon.sh script sets this for shell sessions, but systemd
-  # user services (and GNOME Shell itself) don't source shell profiles, so they miss
-  # the Nix paths. Without this, desktop entries in ~/.nix-profile/share/applications/
-  # won't appear in GNOME's app launcher.
+  # This sets variables via environment.d, which is read by:
+  # - systemd user services (via systemd --user)
+  # - GNOME Shell and other desktop environments (via pam_systemd at login)
+  # - All processes started from the graphical session
   #
-  # Reference: /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh lines 34-39
-  # Reference: XDG Base Directory Specification (freedesktop.org)
+  # HOME-MANAGER IMPLEMENTATION NOTE:
+  # systemd.user.sessionVariables automatically creates ~/.config/environment.d/10-home-manager.conf
+  # which is processed by systemd-environment-d-generator at login time.
+  #
+  # WHY WE NEED THESE VARIABLES:
+  #
+  # 1. PATH:
+  #    Required for standalone home-manager (doesn't auto-configure like nix-darwin).
+  #    Without this, Nix packages in ~/.nix-profile/bin won't be accessible.
+  #
+  # 2. XDG_DATA_DIRS (CRITICAL for GUI apps):
+  #    The Nix installer's /etc/profile.d/nix.sh sets this for shell sessions,
+  #    but GNOME Shell and systemd user services don't source shell profiles.
+  #    Without this, desktop entries in ~/.nix-profile/share/applications/
+  #    won't appear in GNOME's app launcher after reboot.
+  #
+  #    Symptoms without XDG_DATA_DIRS:
+  #    - Terminal launches work (shell sourced /etc/profile.d/nix.sh)
+  #    - GNOME app launcher shows nothing (GNOME Shell started from GDM, no shell)
+  #    - systemd D-Bus activation fails (systemd doesn't source shell profiles)
+  #
+  # REFERENCES:
+  # - /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh lines 34-39 (Nix's own solution for shells)
+  # - XDG Base Directory Specification: https://specifications.freedesktop.org/basedir-spec/latest/
+  # - systemd environment.d: man systemd-environment-d-generator(8)
   systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
     PATH = "$HOME/.nix-profile/bin:$PATH";
     XDG_DATA_DIRS = "$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:$XDG_DATA_DIRS";
@@ -88,26 +109,6 @@ in
     cmatrix
     asciiquarium
   ]);
-
-  # Ensure GNOME/systemd user session has correct environment variables for Nix packages
-  # 
-  # This config file is read by systemd --user and pam_systemd at login time.
-  # It ensures that all user sessions (including graphical sessions like GNOME)
-  # have access to Nix packages and their XDG data (desktop entries, icons, etc.)
-  #
-  # Why both systemd.user.sessionVariables AND environment.d?
-  # - systemd.user.sessionVariables: Sets variables for systemd user services
-  # - environment.d: Sets variables for the entire user session (including login shells)
-  # Both are needed to ensure consistency across all contexts.
-  #
-  # Without XDG_DATA_DIRS here:
-  # - Terminal sessions work (they source /etc/profile.d/nix.sh)
-  # - GNOME Shell doesn't (it starts from GDM, not a shell)
-  # - Result: Desktop entries missing from GNOME app launcher after reboot
-  xdg.configFile."environment.d/envvars.conf".text = ''
-    PATH="$HOME/.nix-profile/bin:$PATH"
-    XDG_DATA_DIRS="$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:$XDG_DATA_DIRS"
-  '';
 
   # Check if zsh is the default shell and inform user how to set it up
   # Reference: https://wiki.nixos.org/wiki/Command_Shell#Changing_the_default_shell
