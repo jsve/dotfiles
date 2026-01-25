@@ -40,7 +40,7 @@ let
 in
 {
   # Configure nixGL
-  nixGL = {
+  targets.genericLinux.nixGL = {
     packages = nixGL.packages;
     defaultWrapper = "mesa"; # Use mesa for most systems, change to "nvidia" if using NVIDIA GPU
   };
