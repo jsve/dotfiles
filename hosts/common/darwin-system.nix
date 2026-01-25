@@ -102,25 +102,11 @@ in
     #   # "tailscale"
     #   # "borders"
     # ];
-    casks = [
-      "1password"
-      "ghostty"
-      "google-chrome"
-      # "karabiner-elements"
-      "fluor"
-      "lm-studio"
-      "microsoft-excel"
-      "mongodb-compass"
-      # "notion"
-      # "obsidian"
-      # "orbstack" <- managed by home-manager
-      # "signal"
-      # "slack" <- managed by home-manager
-      "steam"
-      # "wireshark"
-      # "visual-studio-code" <- managed by home-manager
-      "vlc"
-    ];
+    casks =
+      let
+        guiApps = import ./gui-apps-list.nix;
+      in
+      guiApps.common ++ guiApps.darwin;
     # masApps = {
     #   # "Amphetamine" = 937984704;
     #   # "AutoMounter" = 1160435653;

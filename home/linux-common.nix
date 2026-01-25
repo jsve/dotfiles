@@ -6,6 +6,17 @@ let
   # Import the shared package list from hosts/common - same packages as nix-darwin/NixOS system packages
   # but installed at user-level since we don't have system-level package management on Fedora
   packageList = import ./../hosts/common/system-packages-list.nix { inherit pkgs; };
+
+  # Import GUI apps manifest
+  guiApps = import ./../hosts/common/gui-apps-list.nix;
+
+  # Map app names to nix packages where available
+  # Filter out any that don't exist in nixpkgs
+  guiPackages = builtins.filter (x: x != null) (
+    builtins.map (appName: if builtins.hasAttr appName pkgs then pkgs.${appName} else null) (
+      guiApps.common ++ guiApps.linux
+    )
+  );
 in
 {
   # Make packages available system-wide via systemd user session
@@ -15,7 +26,7 @@ in
   };
 
   # Install the shared package list at user-level
-  home.packages = packageList;
+  home.packages = packageList ++ guiPackages;
 
   # Check if zsh is the default shell and inform user how to set it up
   # Reference: https://wiki.nixos.org/wiki/Command_Shell#Changing_the_default_shell
