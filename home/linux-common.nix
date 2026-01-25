@@ -71,7 +71,13 @@ in
   systemd.user.packages = openglGuiPackages ++ regularGuiPackages;
 
   # Install the shared package list at user-level
-  home.packages = packageList ++ regularGuiPackages ++ openglGuiPackages;
+  home.packages = packageList ++ regularGuiPackages ++ openglGuiPackages ++ (with pkgs; [
+    # Fun ASCII/terminal toys (JsFlowdora only for now)
+    cowsay
+    sl
+    cmatrix
+    asciiquarium
+  ]);
 
   # Ensure GNOME/systemd user session has correct PATH for nix packages
   xdg.configFile."environment.d/envvars.conf".text = ''

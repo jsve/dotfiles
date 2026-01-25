@@ -85,11 +85,7 @@
       pkgs = inputs.nixpkgs.legacyPackages.${system};
       unstablePkgs = inputs.nixpkgs-unstable.legacyPackages.${system};
       customConfPath = ./../hosts/linux/${hostname};
-      customConf =
-        if builtins.pathExists (customConfPath) then
-          (customConfPath + "/default.nix")
-        else
-          ./../hosts/common/linux-common.nix;
+      hostSpecificConf = customConfPath + "/default.nix";
     in
     inputs.home-manager.lib.homeManagerConfiguration {
       inherit pkgs;
@@ -112,6 +108,9 @@
         }
         ./../home/common.nix
         ./../home/linux-common.nix
+      ]
+      ++ lib.optionals (builtins.pathExists hostSpecificConf) [
+        hostSpecificConf
       ]
       ++ lib.optionals (builtins.pathExists ./../home/${username}.nix) [
         ./../home/${username}.nix
