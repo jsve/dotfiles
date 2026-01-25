@@ -12,6 +12,11 @@
   linux = [
   ];
 
+  # Linux GUI apps that need OpenGL wrapping (nixGL)
+  linux-opengl-apps = [
+    "ghostty"
+  ];
+
   # Darwin-specific GUI apps (Homebrew casks)
   darwin = [
     "1password"

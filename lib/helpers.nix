@@ -100,6 +100,7 @@
           username
           unstablePkgs
           ;
+        nixGL = inputs.nixGL;
       };
       modules = [
         {
