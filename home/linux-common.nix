@@ -47,8 +47,18 @@ in
 
   # Make packages available system-wide via systemd user session
   # Required because standalone home-manager doesn't auto-configure PATH like nix-darwin does
+  #
+  # CRITICAL: Also set XDG_DATA_DIRS so GNOME can find desktop entries and icons.
+  # The Nix installer's nix-daemon.sh script sets this for shell sessions, but systemd
+  # user services (and GNOME Shell itself) don't source shell profiles, so they miss
+  # the Nix paths. Without this, desktop entries in ~/.nix-profile/share/applications/
+  # won't appear in GNOME's app launcher.
+  #
+  # Reference: /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh lines 34-39
+  # Reference: XDG Base Directory Specification (freedesktop.org)
   systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
     PATH = "$HOME/.nix-profile/bin:$PATH";
+    XDG_DATA_DIRS = "$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:$XDG_DATA_DIRS";
   };
 
   # Enable systemd services from packages (home-manager PR #8540)
@@ -79,9 +89,24 @@ in
     asciiquarium
   ]);
 
-  # Ensure GNOME/systemd user session has correct PATH for nix packages
+  # Ensure GNOME/systemd user session has correct environment variables for Nix packages
+  # 
+  # This config file is read by systemd --user and pam_systemd at login time.
+  # It ensures that all user sessions (including graphical sessions like GNOME)
+  # have access to Nix packages and their XDG data (desktop entries, icons, etc.)
+  #
+  # Why both systemd.user.sessionVariables AND environment.d?
+  # - systemd.user.sessionVariables: Sets variables for systemd user services
+  # - environment.d: Sets variables for the entire user session (including login shells)
+  # Both are needed to ensure consistency across all contexts.
+  #
+  # Without XDG_DATA_DIRS here:
+  # - Terminal sessions work (they source /etc/profile.d/nix.sh)
+  # - GNOME Shell doesn't (it starts from GDM, not a shell)
+  # - Result: Desktop entries missing from GNOME app launcher after reboot
   xdg.configFile."environment.d/envvars.conf".text = ''
     PATH="$HOME/.nix-profile/bin:$PATH"
+    XDG_DATA_DIRS="$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:$XDG_DATA_DIRS"
   '';
 
   # Check if zsh is the default shell and inform user how to set it up
