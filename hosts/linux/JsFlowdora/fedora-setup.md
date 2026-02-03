@@ -90,6 +90,10 @@ exec-once = systemctl --user start hyprpolkitagent
 
 ### Addon rabbit holes
 
+#### walker / elephant
+
+initially installed through dnf. reverted and added to nix config.
+
 #### 🪦 REVERTED - walker / elephant
 
 add walker:
@@ -158,7 +162,7 @@ elephant stores data in:
 - `~/.cache/elephant/` - usage history/frecency data (`.gob` files)
 - `~/.config/elephant/providers/` - the plugin `.so` files
 
-#### Reversion
+#### Reverting walker / elephant
 
 stop and disable elephant service:
 
