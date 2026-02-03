@@ -90,7 +90,7 @@ exec-once = systemctl --user start hyprpolkitagent
 
 ### Addon rabbit holes
 
-#### walker / elephant
+#### 🪦 REVERTED - walker / elephant
 
 add walker:
 
@@ -157,6 +157,43 @@ bind = $mainMod, SPACE, exec, walker
 elephant stores data in:
 - `~/.cache/elephant/` - usage history/frecency data (`.gob` files)
 - `~/.config/elephant/providers/` - the plugin `.so` files
+
+#### Reversion
+
+stop and disable elephant service:
+
+```
+systemctl --user stop elephant.service
+systemctl --user disable elephant.service
+```
+
+remove elephant service files:
+
+```
+rm -f ~/.config/systemd/user/elephant.service
+rm -rf ~/.config/systemd/user/elephant.service.d
+systemctl --user daemon-reload
+```
+
+remove elephant binary and data:
+
+```
+rm -f ~/go/bin/elephant
+rm -rf ~/.config/elephant
+rm -rf ~/.cache/elephant
+```
+
+remove walker package and copr repo:
+
+```
+sudo dnf remove walker
+sudo dnf copr disable errornointernet/walker
+```
+
+remove hyprland keybindings and autostart (edit ~/.config/hypr/hyprland.conf):
+- remove `exec-once = systemctl --user start elephant`
+- remove `bind = $mainMod, SPACE, exec, walker` (or similar)
+
 TODO: find a way to boot back into gnome
 TODO: find out what to do with uwsm
 TODO: gnome apps look shitty. what to do?
