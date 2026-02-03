@@ -90,7 +90,9 @@ exec-once = systemctl --user start hyprpolkitagent
 
 ### Addon rabbit holes
 
-add walker though
+#### walker / elephant
+
+add walker:
 
 ```
 sudo dnf copr enable errornointernet/walker
@@ -99,8 +101,38 @@ sudo dnf install walker
 
 install elephant from source https://github.com/abenz1267/elephant
 
-add go to path in bashrc: export PATH="$HOME/go/bin:$PATH"
-add service with elephant service enable
+make sure go is installed: `sudo dnf install golang`
+
+add go to path in bashrc: `export PATH="$HOME/go/bin:$PATH"`
+
+clone and build elephant:
+
+```
+git clone https://github.com/abenz1267/elephant.git
+cd elephant
+go build
+mkdir -p ~/go/bin
+cp elephant ~/go/bin/
+```
+
+build elephant providers:
+
+```
+cd providers/desktopapplications
+go build -buildmode=plugin
+mkdir -p ~/.config/elephant/providers
+cp desktopapplications.so ~/.config/elephant/providers/
+
+cd ../providerlist
+go build -buildmode=plugin
+cp providerlist.so ~/.config/elephant/providers/
+```
+
+enable and start elephant service:
+
+```
+elephant service enable
+```
 
 modify the service unit via `systemctl --user edit elephant.service` to have:
 
@@ -110,9 +142,21 @@ ExecStart=
 ExecStart=%h/go/bin/elephant
 ```
 
+start the service:
 
+```
+systemctl --user start elephant.service
+```
 
-TODO: find out how to start walker properly
+add keybinding in hyprland.conf:
+
+```
+bind = $mainMod, SPACE, exec, walker
+```
+
+elephant stores data in:
+- `~/.cache/elephant/` - usage history/frecency data (`.gob` files)
+- `~/.config/elephant/providers/` - the plugin `.so` files
 TODO: find a way to boot back into gnome
 TODO: find out what to do with uwsm
 TODO: gnome apps look shitty. what to do?
