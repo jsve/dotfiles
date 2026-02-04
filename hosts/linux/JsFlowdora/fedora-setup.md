@@ -72,6 +72,32 @@ instead, and then again
 sudo dnf install hyprland sddm tuned tuned-ppd kitty waybar hyprpolkitagent nautilus pavucontrol alsa-sof-firmware alsa-utils blueman NetworkManager-wifi iwl* nm-connection-editor-desktop gvfs gvfs-mtp
 ```
 
+**Install notes:**
+
+Verified actual installation via DNF history (transaction 7, 2026-01-11).
+
+Many packages from the tutorial command were already installed from the initial system setup (transaction 2, 2025-10-23):
+- `nautilus` - installed as part of GNOME base
+- `gvfs` and `gvfs-mtp` - installed with GNOME file system support
+- `alsa-sof-firmware` and `alsa-utils` - installed with audio support
+- `NetworkManager-wifi` - installed with network support
+- `iwl*` (all Intel WiFi firmware packages) - installed with network drivers
+- `tuned` and `tuned-ppd` - installed as dependencies/weak dependencies
+- `nm-connection-editor` (base package) - installed as weak dependency
+
+Only these packages were actually installed:
+```
+hyprland sddm kitty waybar hyprpolkitagent pavucontrol blueman nm-connection-editor-desktop
+```
+
+This installed 59 packages total including dependencies and weak dependencies:
+- Core Hyprland stack: hyprland, hyprland-qt-support, hyprland-uwsm, xdg-desktop-portal-hyprland
+- Supporting libs: aquamarine, hyprcursor, hyprgraphics, hyprutils, hyprwire, hyprlang
+- Tools: wofi, wlr-randr, brightnessctl, hyprpicker, grim, slurp, ripgrep
+- UI components: nwg-panel, fontawesome fonts
+
+**End install notes**
+
 this guide has some claims about gnome and hyprland: https://dev.to/renhiyama/how-to-dualboot-hyprland-with-gnome-desktops-on-linux-1pa4
 
 looks like:
