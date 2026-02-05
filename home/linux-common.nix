@@ -39,10 +39,14 @@ let
   );
 in
 {
-  # Configure nixGL
+  # Enable generic Linux target for better integration on non-NixOS (Fedora)
+  targets.genericLinux.enable = true;
+
+  # Configure nixGL for GPU access (OpenGL/Vulkan wrappers)
+  # Required for GUI apps to access GPU on non-NixOS systems
   targets.genericLinux.nixGL = {
     packages = nixGL.packages;
-    defaultWrapper = "mesa"; # Use mesa for most systems, change to "nvidia" if using NVIDIA GPU
+    defaultWrapper = "mesa"; # AMD GPU (Radeon) - use "nvidia" for NVIDIA
   };
 
   # Configure environment variables for systemd user session and all user processes
@@ -56,22 +60,12 @@ in
   # systemd.user.sessionVariables automatically creates ~/.config/environment.d/10-home-manager.conf
   # which is processed by systemd-environment-d-generator at login time.
   #
-  # WHY WE NEED THESE VARIABLES:
+  # WHY WE NEED PATH:
+  # Required for standalone home-manager (doesn't auto-configure like nix-darwin).
+  # Without this, Nix packages in ~/.nix-profile/bin won't be accessible from GUI apps.
   #
-  # 1. PATH:
-  #    Required for standalone home-manager (doesn't auto-configure like nix-darwin).
-  #    Without this, Nix packages in ~/.nix-profile/bin won't be accessible.
-  #
-  # 2. XDG_DATA_DIRS (CRITICAL for GUI apps):
-  #    The Nix installer's /etc/profile.d/nix.sh sets this for shell sessions,
-  #    but GNOME Shell and systemd user services don't source shell profiles.
-  #    Without this, desktop entries in ~/.nix-profile/share/applications/
-  #    won't appear in GNOME's app launcher after reboot.
-  #
-  #    Symptoms without XDG_DATA_DIRS:
-  #    - Terminal launches work (shell sourced /etc/profile.d/nix.sh)
-  #    - GNOME app launcher shows nothing (GNOME Shell started from GDM, no shell)
-  #    - systemd D-Bus activation fails (systemd doesn't source shell profiles)
+  # NOTE: XDG_DATA_DIRS is now handled by targets.genericLinux.enable = true
+  # which sets it via xdg.systemDirs.data (including nix profile paths).
   #
   # REFERENCES:
   # - /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh lines 34-39 (Nix's own solution for shells)
@@ -79,7 +73,6 @@ in
   # - systemd environment.d: man systemd-environment-d-generator(8)
   systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
     PATH = "$HOME/.nix-profile/bin:$PATH";
-    XDG_DATA_DIRS = "$HOME/.nix-profile/share:/nix/var/nix/profiles/default/share:$XDG_DATA_DIRS";
   };
 
   # Enable systemd services from packages (home-manager PR #8540)

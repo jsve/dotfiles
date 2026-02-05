@@ -44,11 +44,93 @@ set FastConnectable = true (was = false and commented)
 
 set TemporaryTimeout = 0 (was = 30 and commented)
 
-## Hyprland
+## Hyprland (via Nix + home-manager)
 
-Reverted 2026-02-05. See REVERTED section below.
+Reference: https://gist.github.com/AntonFriberg/1dcb1ee6bf2c92c5f641a6f764d582d9
 
-### Reverting Hyprland
+Installed 2026-02-05 via Nix + home-manager, replacing the previous Fedora COPR-based install.
+
+### Why Nix instead of Fedora packages?
+
+- **Isolation**: Nix packages + dependencies are self-contained in `/nix`, won't conflict with system packages
+- **Reproducible**: Flake lock ensures exact versions across rebuilds
+- **Easy rollback**: `home-manager generations` shows history, can switch back instantly
+- **Unified config**: Single `just switch` updates everything (hyprland, walker, ghostty, etc.)
+
+### How it works
+
+Configuration is in the dotfiles repo:
+
+- `home/modules/hyprland/hyprland.nix` - Hyprland window manager config
+- `home/modules/hyprland/walker.nix` - Application launcher config
+- `home/with-hyprland.nix` - Imports both modules
+- `hosts/linux/JsFlowdora/default.nix` - Imports with-hyprland.nix
+- `home/linux-common.nix` - nixGL setup for GPU access (mesa for AMD)
+
+The `wayland.windowManager.hyprland` home-manager module handles:
+- Installing hyprland wrapped with nixGL for GPU access
+- Generating `~/.config/hypr/hyprland.conf` from nix settings
+- Setting up xdg-desktop-portal-hyprland
+
+### GDM Session Entry
+
+Create the desktop entry so Hyprland appears in GDM login screen:
+
+```bash
+sudo tee /usr/share/wayland-sessions/hyprland.desktop << 'EOF'
+[Desktop Entry]
+Name=Hyprland
+Comment=An intelligent dynamic tiling Wayland compositor (Nix)
+Exec=/home/johan/.nix-profile/bin/Hyprland
+Type=Application
+EOF
+```
+
+### Key diversions from the reference guide
+
+| Guide says | We do instead | Why |
+|------------|---------------|-----|
+| Create `~/.config/home-manager/` | Use `~/repos/dotfiles/` | Already have a flake-based dotfiles repo |
+| Use alacritty | Keep ghostty | Personal preference |
+| Install via `home-manager switch --flake ~/.config/home-manager` | Use `just switch` | Integrated with existing workflow |
+| `nixGL.packages = nixGL.packages` at module level | `targets.genericLinux.nixGL.packages = nixGL.packages` | Correct path for current home-manager |
+
+### Useful commands
+
+```bash
+# Rebuild and apply config changes
+just switch
+
+# Check Hyprland version
+Hyprland --version
+
+# Update all nix inputs (including hyprland)
+just update && just switch
+
+# Rollback to previous generation
+home-manager generations  # list generations
+/nix/store/xxx-home-manager-generation/activate  # activate a previous one
+```
+
+### Uninstalling
+
+To fully remove Hyprland and Nix:
+
+```bash
+# Remove GDM session entry
+sudo rm /usr/share/wayland-sessions/hyprland.desktop
+
+# Uninstall everything via Determinate Nix Installer
+/nix/nix-installer uninstall
+```
+
+This removes Nix, home-manager, and all packages cleanly.
+
+---
+
+Previous DNF-based install reverted 2026-02-05. See REVERTED section below.
+
+### Reverting Hyprland (DNF version)
 
 Remove hyprland packages (only removes what was actually installed, not base system packages):
 
