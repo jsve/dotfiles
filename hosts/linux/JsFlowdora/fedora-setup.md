@@ -46,6 +46,40 @@ set TemporaryTimeout = 0 (was = 30 and commented)
 
 ## Hyprland
 
+Reverted 2026-02-05. See REVERTED section below.
+
+### Reverting Hyprland
+
+Remove hyprland packages (only removes what was actually installed, not base system packages):
+
+```
+sudo dnf remove hyprland sddm kitty waybar hyprpolkitagent pavucontrol blueman nm-connection-editor-desktop
+```
+
+Disable copr repos:
+
+```
+sudo dnf copr disable lionheartp/Hyprland
+sudo dnf copr disable solopasha/hyprland
+```
+
+Remove config directories:
+
+```
+rm -rf ~/.config/hypr
+rm -rf ~/.config/kitty
+```
+
+Remove leftover data/cache directories:
+
+```
+rm -rf ~/.local/share/hyprland
+rm -rf ~/.cache/kitty
+rm -rf ~/.cache/"Hyprland Polkit Agent"
+```
+
+### 🪦 REVERTED - Hyprland
+
 followed this: https://discussion.fedoraproject.org/t/tutorial-fedora-43-install-hyprland-from-scratch/168386
 
 ```
@@ -59,7 +93,7 @@ sudo dnf install hyprland sddm tuned tuned-ppd kitty waybar hyprpolkitagent naut
 repo seems dead. according to https://github.com/solopasha/hyprlandRPM/issues/47
 
 did
-´´´
+```
 sudo dnf copr disable solopasha/hyprland 
 sudo dnf copr enable lionheartp/Hyprland 
 sudo dnf distro-sync
@@ -113,8 +147,6 @@ exec-once = $terminal
 exec-once = waybar
 exec-once = systemctl --user start hyprpolkitagent
 ```
-
-### Addon rabbit holes
 
 #### walker / elephant
 
