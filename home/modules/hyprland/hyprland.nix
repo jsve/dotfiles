@@ -114,8 +114,8 @@
       # Layer rules for blur on transparent bars/menus
       # See https://wiki.hypr.land/Configuring/Window-Rules/#layer-rules
       layerrule = [
-        "blur, waybar"
-        "ignorealpha 0.3, waybar"
+        "blur on, match:namespace waybar"
+        "ignore_alpha 0.3, match:namespace waybar"
       ];
 
       # Keybindings
