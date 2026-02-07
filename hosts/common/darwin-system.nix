@@ -55,7 +55,6 @@ in
     # pkgs.nodejs # <- managed by common-packages
     # pkgs.vscode # <- managed by home-manager
     pkgs.slack
-    pkgs.nixfmt-rfc-style # formatter used in vscode etc
   ];
 
   fonts.packages = [

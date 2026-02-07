@@ -8,5 +8,6 @@
   imports = [
     ./modules/hyprland/hyprland.nix
     ./modules/hyprland/walker.nix
+    ./modules/hyprland/waybar.nix
   ];
 }

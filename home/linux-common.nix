@@ -80,7 +80,7 @@ in
   #
   # Without this, apps with DBusActivatable=true in their .desktop files (like Ghostty)
   # would fail to launch from the GNOME app launcher with the error:
-  #   "Activation request for 'com.example.app' failed: 
+  #   "Activation request for 'com.example.app' failed:
   #    The systemd unit 'app-com.example.app.service' could not be found."
   #
   # The issue occurs because:
@@ -94,14 +94,26 @@ in
   #   systemctl --user status app-com.example.app.service
   systemd.user.packages = openglGuiPackages ++ regularGuiPackages;
 
+  # Fonts — mirrors fonts.packages in darwin-system.nix
+  # On non-NixOS, there's no fonts.packages so we install via home.packages
+  # and enable fontconfig so fc-cache picks them up
+  fonts.fontconfig.enable = true;
+
   # Install the shared package list at user-level
-  home.packages = packageList ++ regularGuiPackages ++ openglGuiPackages ++ (with pkgs; [
-    # Fun ASCII/terminal toys (JsFlowdora only for now)
-    cowsay
-    sl
-    cmatrix
-    asciiquarium
-  ]);
+  home.packages =
+    packageList
+    ++ regularGuiPackages
+    ++ openglGuiPackages
+    ++ [
+      pkgs.nerd-fonts.jetbrains-mono
+    ]
+    ++ (with pkgs; [
+      # Fun ASCII/terminal toys (JsFlowdora only for now)
+      cowsay
+      sl
+      cmatrix
+      asciiquarium
+    ]);
 
   # Check if zsh is the default shell and inform user how to set it up
   # Reference: https://wiki.nixos.org/wiki/Command_Shell#Changing_the_default_shell

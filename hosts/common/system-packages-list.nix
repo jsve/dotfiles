@@ -35,6 +35,7 @@ with pkgs;
   jq
   just
   # kubectl
+  nixfmt # formatter for nix files
   # mc
   # mosh
   # nmap

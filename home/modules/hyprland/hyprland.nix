@@ -106,6 +106,16 @@
         # Polkit agent for authentication dialogs
         # Note: Using systemd service instead of hyprpolkitagent for now
         # "systemctl --user start hyprpolkitagent"
+
+        # Status bar
+        "waybar"
+      ];
+
+      # Layer rules for blur on transparent bars/menus
+      # See https://wiki.hypr.land/Configuring/Window-Rules/#layer-rules
+      layerrule = [
+        "blur, waybar"
+        "ignorealpha 0.3, waybar"
       ];
 
       # Keybindings
