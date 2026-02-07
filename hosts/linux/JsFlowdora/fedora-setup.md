@@ -72,6 +72,8 @@ The `wayland.windowManager.hyprland` home-manager module handles:
 - Generating `~/.config/hypr/hyprland.conf` from nix settings
 - Setting up xdg-desktop-portal-hyprland
 
+**Note on nixGL:** Since Hyprland 0.53.2, the `start-hyprland` script auto-detects and uses nixGL when needed for standalone installations (via `nix profile install`). However, when using Home Manager, we still need to manually wrap the package with nixGL since Home Manager doesn't use the `start-hyprland` script.
+
 ### GDM Session Entry
 
 Create the desktop entry so Hyprland appears in GDM login screen:

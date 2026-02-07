@@ -15,6 +15,8 @@
 
     # Wrap with nixGL for GPU access on non-NixOS (Fedora)
     # nixGL is configured in linux-common.nix with mesa wrapper for AMD GPU
+    # Note: Since Hyprland 0.53.2, start-hyprland auto-detects nixGL for standalone installs,
+    # but Home Manager doesn't use that script, so manual wrapping is still required.
     package = config.lib.nixGL.wrap pkgs.hyprland;
 
     # Hyprland configuration
