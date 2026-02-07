@@ -1,5 +1,5 @@
 # Hyprland window manager configuration via home-manager
-# Uses nixGL wrapper for standalone (non-NixOS) systems
+# Launched via start-hyprland which handles nixGL wrapping automatically
 #
 # Reference: https://gist.github.com/AntonFriberg/1dcb1ee6bf2c92c5f641a6f764d582d9
 # Docs: https://wiki.hyprland.org/
@@ -13,11 +13,15 @@
   wayland.windowManager.hyprland = {
     enable = true;
 
-    # Wrap with nixGL for GPU access on non-NixOS (Fedora)
-    # nixGL is configured in linux-common.nix with mesa wrapper for AMD GPU
-    # Note: Since Hyprland 0.53.2, start-hyprland auto-detects nixGL for standalone installs,
-    # but Home Manager doesn't use that script, so manual wrapping is still required.
-    package = config.lib.nixGL.wrap pkgs.hyprland;
+    # No nixGL wrapping needed — start-hyprland handles it automatically.
+    # Since Hyprland 0.53.2, the start-hyprland watchdog binary:
+    #   1. Detects that Hyprland was built with Nix on a non-NixOS system
+    #   2. Calls execvp("nixGL", ...) to wrap Hyprland with the right GPU drivers
+    #   3. Provides a watchdog that restarts Hyprland in safe-mode on crash
+    # The "nixGL" wrapper script is provided via linux-common.nix (delegates to nixGLMesa).
+    # GDM session entry must use start-hyprland (not Hyprland directly).
+    # See: start/src/core/Instance.cpp and start/src/helpers/Nix.cpp in Hyprland repo
+    package = pkgs.hyprland;
 
     # Hyprland configuration
     # See https://wiki.hyprland.org/Configuring/
@@ -33,8 +37,9 @@
 
         # Laptop screen below external monitor, centered horizontally
         # Y position = external's scaled height (2160/1.5 = 1440)
-        # X position = (external_width - laptop_width) / 2 = (2560 - 1280) / 2 = 640
-        "eDP-1, 2560x1600@180, 640x1440, 2"
+        # X position = (external_width - laptop_width) / 2 = (2560 - 2048) / 2 = 256
+        # Scale 1.25 for 2560x1600 @ 13.4" = 2048x1280 logical
+        "eDP-1, 2560x1600@180, 256x1440, 1.25"
 
         # Fallback for unknown external monitors - place above laptop
         ", preferred, 0x0, 1.5"
@@ -91,7 +96,10 @@
         kb_layout = "se";
         follow_mouse = 1;
         touchpad = {
-          natural_scroll = true;
+          natural_scroll = false; # Traditional scroll direction
+          tap-to-click = false; # Disable tap, require physical click
+          clickfinger_behavior = true; # 2 fingers + click = right click (instead of position-based)
+          middle_button_emulation = false; # Disable middle click emulation
         };
         sensitivity = 0;
       };

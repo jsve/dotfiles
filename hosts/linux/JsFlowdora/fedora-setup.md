@@ -68,11 +68,44 @@ Configuration is in the dotfiles repo:
 - `home/linux-common.nix` - nixGL setup for GPU access (mesa for AMD)
 
 The `wayland.windowManager.hyprland` home-manager module handles:
-- Installing hyprland wrapped with nixGL for GPU access
+- Installing hyprland (nixGL wrapping handled by `start-hyprland` at launch)
 - Generating `~/.config/hypr/hyprland.conf` from nix settings
 - Setting up xdg-desktop-portal-hyprland
 
-**Note on nixGL:** Since Hyprland 0.53.2, the `start-hyprland` script auto-detects and uses nixGL when needed for standalone installations (via `nix profile install`). However, when using Home Manager, we still need to manually wrap the package with nixGL since Home Manager doesn't use the `start-hyprland` script.
+**How nixGL works:** Since Hyprland 0.53.2, `start-hyprland` auto-detects Nix-built Hyprland on non-NixOS and wraps it via `execvp("nixGL", ...)`. We provide the `nixGL` binary by creating a wrapper script (in `linux-common.nix`) that delegates to `nixGLMesa` from home-manager's nixGL module. The GDM session entry uses `start-hyprland` instead of `Hyprland` directly, which also provides watchdog crash-restart. Other GUI apps (Waybar, Ghostty) still use home-manager's `config.lib.nixGL.wrap` for their own wrapping.
+
+#### nixGL wrapper workaround (current as of 2026-02-07)
+
+**The problem:** Hyprland's `start-hyprland` expects a binary named exactly `nixGL` in `$PATH`, but:
+- Home-manager's nixGL module only installs specific wrappers like `nixGLMesa`, `nixGLNvidia`
+- The nixGL flake provides `nixGLDefault` (auto-detect) but NOT a generic `nixGL` binary name
+- There's no pure flake-based way to get a binary named `nixGL` without `--impure`
+
+**Our solution:** In `linux-common.nix`, copy the nixGLIntel binary and rename it to `nixGL`:
+```nix
+(pkgs.runCommand "nixGL" { } ''
+  mkdir -p $out/bin
+  cp ${nixGL.packages.${pkgs.system}.nixGLIntel}/bin/* $out/bin/nixGL
+'')
+```
+This mirrors what `nixGLCommon` does internally in the nixGL flake, but is pure (no --impure needed) because we use the mesa/intel wrapper directly instead of the auto-detecting nvidia version.
+
+**Why this is necessary:**
+1. `start-hyprland` hardcodes `execvp("nixGL", ...)` in `start/src/core/Instance.cpp`
+2. The detection logic in `start/src/helpers/Nix.cpp` checks for `"nix"` flag in `Hyprland --version-json`
+3. Home-manager's `targets.genericLinux.nixGL.installScripts = [ "mesa" ]` only creates `nixGLMesa`
+4. The nixGL flake's `nixGLCommon` helper could create a `nixGL` binary, but requires impure evaluation
+
+**When this might be fixed:**
+- If Hyprland changes to look for `nixGLMesa`/`nixGLNvidia` directly (check `start/src/helpers/Nix.cpp`)
+- If home-manager adds an option to create a generic `nixGL` alias
+- If nixGL flake adds pure packages with the `nixGL` name
+
+**Versions when this workaround was implemented:**
+- Hyprland: 0.53.3 (nixpkgs)
+- nixGL: b6105297 (2025-11-02)
+
+**Alternative (not recommended):** Install nixGL imperatively via `nix profile install github:nix-community/nixGL --impure`. This provides `nixGLDefault` but defeats the purpose of pure flake-based config.
 
 ### GDM Session Entry
 
@@ -83,7 +116,7 @@ sudo tee /usr/share/wayland-sessions/hyprland.desktop << 'EOF'
 [Desktop Entry]
 Name=Hyprland
 Comment=An intelligent dynamic tiling Wayland compositor (Nix)
-Exec=/home/johan/.nix-profile/bin/Hyprland
+Exec=/home/johan/.nix-profile/bin/start-hyprland
 Type=Application
 EOF
 ```

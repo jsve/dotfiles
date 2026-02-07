@@ -47,6 +47,7 @@ in
   targets.genericLinux.nixGL = {
     packages = nixGL.packages;
     defaultWrapper = "mesa"; # AMD GPU (Radeon) - use "nvidia" for NVIDIA
+    installScripts = [ "mesa" ]; # Installs nixGLMesa script in PATH
   };
 
   # Configure environment variables for systemd user session and all user processes
@@ -106,6 +107,27 @@ in
     ++ openglGuiPackages
     ++ [
       pkgs.nerd-fonts.jetbrains-mono
+
+      # "nixGL" binary — required by start-hyprland (Hyprland 0.53.2+)
+      #
+      # start-hyprland calls execvp("nixGL", ...) to wrap Hyprland with GPU drivers.
+      # See: https://github.com/hyprwm/Hyprland/blob/main/start/src/core/Instance.cpp
+      #
+      # Problem: The nixGL flake only exports specifically-named binaries (nixGLIntel,
+      # nixGLMesa, etc.) but not a generic "nixGL". The auto-detecting nixGLDefault
+      # requires --impure for nvidia detection.
+      #
+      # Solution: Copy the mesa wrapper binary and rename it to "nixGL".
+      # This mirrors what nixGLCommon does internally in the nixGL flake.
+      # For NVIDIA, change nixGLIntel to nixGL.packages.${system}.nixGLNvidia
+      #
+      # Check if still needed: grep 'execvp.*nixGL' in Hyprland's start/ directory
+      # Versions: Hyprland 0.53.3, nixGL b610529 (2025-11-02)
+      # See: hosts/linux/JsFlowdora/fedora-setup.md for full explanation
+      (pkgs.runCommand "nixGL" { } ''
+        mkdir -p $out/bin
+        cp ${nixGL.packages.${pkgs.system}.nixGLIntel}/bin/* $out/bin/nixGL
+      '')
     ]
     ++ (with pkgs; [
       # Fun ASCII/terminal toys (JsFlowdora only for now)
