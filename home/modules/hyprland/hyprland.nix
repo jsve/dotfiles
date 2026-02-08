@@ -9,7 +9,18 @@
   lib,
   ...
 }:
+let
+  # hyprpolkitagent - Polkit authentication agent for Hyprland
+  # Required for GUI applications to request elevated privileges (sudo dialogs).
+  # Qt/QML app that needs nixGL wrapping on non-NixOS systems.
+  # Reference: https://wiki.hypr.land/Hypr-Ecosystem/hyprpolkitagent/
+  hyprpolkitagent = config.lib.nixGL.wrap pkgs.hyprpolkitagent;
+in
 {
+  # Install hyprpolkitagent and make its systemd service available
+  home.packages = [ hyprpolkitagent ];
+  systemd.user.packages = [ hyprpolkitagent ];
+
   wayland.windowManager.hyprland = {
     enable = true;
 
@@ -111,9 +122,8 @@
 
       # Autostart
       exec-once = [
-        # Polkit agent for authentication dialogs
-        # Note: Using systemd service instead of hyprpolkitagent for now
-        # "systemctl --user start hyprpolkitagent"
+        # Polkit agent for authentication dialogs (sudo prompts)
+        "systemctl --user start hyprpolkitagent"
 
         # Status bar
         "waybar"

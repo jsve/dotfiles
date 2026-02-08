@@ -103,7 +103,8 @@ This mirrors what `nixGLCommon` does internally in the nixGL flake, but is pure 
 
 **Versions when this workaround was implemented:**
 - Hyprland: 0.53.3 (nixpkgs)
-- nixGL: b6105297 (2025-11-02)
+- home-manager nixGL module: PR #5355 (merged Oct 2024)
+- nixGL: rolling (github:nix-community/nixGL)
 
 **Alternative (not recommended):** Install nixGL imperatively via `nix profile install github:nix-community/nixGL --impure`. This provides `nixGLDefault` but defeats the purpose of pure flake-based config.
 

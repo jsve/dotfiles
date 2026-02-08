@@ -122,7 +122,7 @@ in
       # For NVIDIA, change nixGLIntel to nixGL.packages.${system}.nixGLNvidia
       #
       # Check if still needed: grep 'execvp.*nixGL' in Hyprland's start/ directory
-      # Versions: Hyprland 0.53.3, nixGL b610529 (2025-11-02)
+      # Versions: Hyprland 0.53.3, home-manager nixGL PR #5355 (Oct 2024)
       # See: hosts/linux/JsFlowdora/fedora-setup.md for full explanation
       (pkgs.runCommand "nixGL" { } ''
         mkdir -p $out/bin
