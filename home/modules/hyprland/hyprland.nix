@@ -45,6 +45,12 @@ in
     # Media control utilities for function keys
     pkgs.brightnessctl # Screen brightness control
     pkgs.playerctl # Media player control (play/pause/next/prev)
+
+    # Bluetooth manager (GTK GUI for bluez) - for advanced settings
+    pkgs.blueman
+
+    # Wayland text input tool - for typing emojis/symbols directly
+    pkgs.wtype
   ];
   systemd.user.packages = [ hyprpolkitagent ];
 

@@ -19,6 +19,37 @@
       force_keyboard_focus = true;
       selection_wrap = true;
       hide_action_hints = true;
+
+      providers.prefixes = [
+        {
+          provider = "providerlist";
+          prefix = "/";
+        }
+        {
+          provider = "files";
+          prefix = ".";
+        }
+        {
+          provider = "symbols";
+          prefix = ":";
+        }
+        {
+          provider = "calc";
+          prefix = "=";
+        }
+        {
+          provider = "websearch";
+          prefix = "@";
+        }
+        {
+          provider = "clipboard";
+          prefix = "$";
+        }
+        {
+          provider = "bluetooth";
+          prefix = "!";
+        }
+      ];
     };
 
     # ezerfrlux-style pink accents theme
@@ -253,23 +284,12 @@
         "runner"
         "symbols"
         "websearch"
+        "bluetooth"
         "providerlist"
       ];
       provider = {
-        # Prefix configuration (ezerfrlux style)
-        providerlist.settings.prefix = "/";
-        files.settings.prefix = ".";
-        symbols.settings.prefix = ":";
-        calc.settings.prefix = "=";
-        websearch.settings = {
-          prefix = "@";
-          entries = [
-            { name = "Google"; url = "https://www.google.com/search?q=%TERM%"; }
-            { name = "NixOS Packages"; url = "https://search.nixos.org/packages?query=%TERM%"; }
-            { name = "Home Manager Options"; url = "https://home-manager-options.extranix.com/?query=%TERM%"; }
-          ];
-        };
-        clipboard.settings.prefix = "$";
+        # Symbols/emoji provider - type directly instead of copy to clipboard
+        symbols.settings.command = "wtype %VALUE%";
       };
     };
   };

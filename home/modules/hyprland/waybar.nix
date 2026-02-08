@@ -54,6 +54,7 @@
         modules-right = [
           "tray"
           "pulseaudio"
+          "bluetooth"
           "network"
           "cpu"
           "memory"
@@ -163,6 +164,21 @@
           on-click-right = "pavucontrol";
         };
 
+        bluetooth = {
+          format = "󰂯 {status}";
+          format-disabled = "󰂲 ";
+          format-off = "󰂲 ";
+          format-on = "󰂯 ";
+          format-connected = "󰂱 {device_alias}";
+          format-connected-battery = "󰂱 {device_alias} {device_battery_percentage}%";
+          tooltip-format = "{controller_alias}\t{controller_address}\n\n{num_connections} connected";
+          tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{num_connections} connected\n\n{device_enumerate}";
+          tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
+          tooltip-format-enumerate-connected-battery = "{device_alias}\t{device_address}\t{device_battery_percentage}%";
+          on-click = "walker --provider bluetooth";
+          on-click-right = "blueman-manager";
+        };
+
         tray = {
           icon-size = 16;
           spacing = 8;
@@ -205,6 +221,7 @@
       #window,
       #tray,
       #pulseaudio,
+      #bluetooth,
       #network,
       #cpu,
       #memory,
@@ -322,6 +339,20 @@
 
       #pulseaudio.muted {
         color: rgba(245, 198, 231, 0.3);
+      }
+
+      /* ── Bluetooth ─────────────────────────────────────────────────────── */
+      #bluetooth {
+        color: #7aa2f7;
+      }
+
+      #bluetooth.disabled,
+      #bluetooth.off {
+        color: rgba(245, 198, 231, 0.3);
+      }
+
+      #bluetooth.connected {
+        color: #7aa2f7;
       }
 
       /* ── CPU & Memory ──────────────────────────────────────────────────── */
