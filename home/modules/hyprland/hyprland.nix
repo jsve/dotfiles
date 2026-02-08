@@ -16,6 +16,12 @@ let
   # Reference: https://wiki.hypr.land/Hypr-Ecosystem/hyprpolkitagent/
   hyprpolkitagent = config.lib.nixGL.wrap pkgs.hyprpolkitagent;
 
+  # hyprlock - GPU-accelerated lock screen for Hyprland with custom Catppuccin styling
+  hyprlock = pkgs.hyprlock;
+
+  # hypridle - Idle daemon for Hyprland that triggers lock/sleep on inactivity
+  hypridle = pkgs.hypridle;
+
   # Catppuccin Kvantum theme - Mocha with Pink accent to match Hyprland theme
   # Pink accent (#f5c6e7) matches our border colors and Walker theme
   catppuccin-kvantum-mocha-pink = pkgs.catppuccin-kvantum.override {
@@ -30,9 +36,11 @@ let
   };
 in
 {
-  # Install hyprpolkitagent and make its systemd service available
+  # Install Hyprland ecosystem packages and theming
   home.packages = [
     hyprpolkitagent
+    hypridle
+    hyprlock
 
     # Kvantum theme engine for Qt5/Qt6 with Catppuccin Mocha Pink
     pkgs.libsForQt5.qtstyleplugin-kvantum
@@ -52,7 +60,10 @@ in
     # Wayland text input tool - for typing emojis/symbols directly
     pkgs.wtype
   ];
-  systemd.user.packages = [ hyprpolkitagent ];
+  systemd.user.packages = [
+    hyprpolkitagent
+    hypridle
+  ];
 
   # GNOME Keyring - Secret Service for credential storage
   # Provides the D-Bus Secret Service API that apps like GitHub Desktop use.
@@ -69,6 +80,12 @@ in
     [General]
     theme=catppuccin-mocha-pink
   '';
+
+  # hyprlock configuration - GPU-accelerated lock screen with Catppuccin Pink styling
+  xdg.configFile."hypr/hyprlock.conf".source = ./hyprlock.conf;
+
+  # hypridle configuration - Idle daemon for triggering lock/sleep on inactivity
+  xdg.configFile."hypr/hypridle.conf".source = ./hypridle.conf;
 
   wayland.windowManager.hyprland = {
     enable = true;
@@ -197,6 +214,9 @@ in
       exec-once = [
         # Polkit agent for authentication dialogs (sudo prompts)
         "systemctl --user start hyprpolkitagent"
+
+        # Idle daemon - monitors inactivity and triggers lock/sleep
+        "systemctl --user start hypridle"
 
         # Status bar
         "waybar"
