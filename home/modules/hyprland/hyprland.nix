@@ -15,11 +15,50 @@ let
   # Qt/QML app that needs nixGL wrapping on non-NixOS systems.
   # Reference: https://wiki.hypr.land/Hypr-Ecosystem/hyprpolkitagent/
   hyprpolkitagent = config.lib.nixGL.wrap pkgs.hyprpolkitagent;
+
+  # Catppuccin Kvantum theme - Mocha with Pink accent to match Hyprland theme
+  # Pink accent (#f5c6e7) matches our border colors and Walker theme
+  catppuccin-kvantum-mocha-pink = pkgs.catppuccin-kvantum.override {
+    accent = "pink";
+    variant = "mocha";
+  };
+
+  # Catppuccin GTK theme - Mocha with Pink accent to match Qt/Kvantum theme
+  catppuccin-gtk-mocha-pink = pkgs.catppuccin-gtk.override {
+    accents = [ "pink" ];
+    variant = "mocha";
+  };
 in
 {
   # Install hyprpolkitagent and make its systemd service available
-  home.packages = [ hyprpolkitagent ];
+  home.packages = [
+    hyprpolkitagent
+
+    # Kvantum theme engine for Qt5/Qt6 with Catppuccin Mocha Pink
+    pkgs.libsForQt5.qtstyleplugin-kvantum
+    pkgs.qt6Packages.qtstyleplugin-kvantum
+    catppuccin-kvantum-mocha-pink
+
+    # GTK theme - Catppuccin Mocha Pink (Hyprland-only via env vars below)
+    catppuccin-gtk-mocha-pink
+  ];
   systemd.user.packages = [ hyprpolkitagent ];
+
+  # GNOME Keyring - Secret Service for credential storage
+  # Provides the D-Bus Secret Service API that apps like GitHub Desktop use.
+  # This ensures credentials persist when switching between GNOME and Hyprland.
+  # The keyring database is shared (~/.local/share/keyrings/).
+  services.gnome-keyring = {
+    enable = true;
+    components = [ "secrets" ]; # Only secrets - GNOME handles pkcs11/ssh when active
+  };
+
+  # Kvantum configuration - set Catppuccin Mocha Pink as the theme
+  # This config file tells Kvantum which theme to use
+  xdg.configFile."Kvantum/kvantum.kvconfig".text = ''
+    [General]
+    theme=catppuccin-mocha-pink
+  '';
 
   wayland.windowManager.hyprland = {
     enable = true;
@@ -37,6 +76,30 @@ in
     # Hyprland configuration
     # See https://wiki.hyprland.org/Configuring/
     settings = {
+      # Environment variables - Hyprland-session only (not GNOME)
+      # Reference: https://wiki.hyprland.org/Configuring/Environment-variables/
+      #
+      # NOT needed here (auto-set by home-manager hyprland module via systemd):
+      #   XDG_CURRENT_DESKTOP, XDG_SESSION_TYPE - see systemd.variables in
+      #   github:nix-community/home-manager/modules/services/window-managers/hyprland.nix
+      #
+      # NOT needed (auto-detected by toolkits):
+      #   GDK_BACKEND - GTK auto-detects Wayland via WAYLAND_DISPLAY
+      #   SDL_VIDEODRIVER - leave default, setting can break some games
+      env = [
+        "QT_QPA_PLATFORM,wayland;xcb" # Use Wayland, fall back to X11
+        "QT_AUTO_SCREEN_SCALE_FACTOR,1" # Automatic HiDPI scaling
+        "QT_WAYLAND_DISABLE_WINDOWDECORATION,1" # Let Hyprland handle decorations
+
+        # Qt theming - Kvantum with Catppuccin Mocha Pink (matches Hyprland theme)
+        # Only set in Hyprland session; GNOME handles Qt theming automatically
+        "QT_STYLE_OVERRIDE,kvantum"
+
+        # GTK theming - Catppuccin Mocha Pink (Hyprland-only)
+        # GTK_THEME overrides settings.ini, so this won't affect GNOME session
+        "GTK_THEME,catppuccin-mocha-pink-standard"
+      ];
+
       # Monitor configuration
       # See https://wiki.hyprland.org/Configuring/Monitors/
       # Layout: External monitors ABOVE laptop screen (vertically stacked)
