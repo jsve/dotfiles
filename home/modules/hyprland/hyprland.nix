@@ -41,6 +41,10 @@ in
 
     # GTK theme - Catppuccin Mocha Pink (Hyprland-only via env vars below)
     catppuccin-gtk-mocha-pink
+
+    # Media control utilities for function keys
+    pkgs.brightnessctl # Screen brightness control
+    pkgs.playerctl # Media player control (play/pause/next/prev)
   ];
   systemd.user.packages = [ hyprpolkitagent ];
 
@@ -260,6 +264,31 @@ in
       bindm = [
         "$mainMod, mouse:272, movewindow"
         "$mainMod, mouse:273, resizewindow"
+      ];
+
+      # Function keys (media controls, volume, brightness)
+      # bindl = bind listener (works even when screen is locked)
+      # bindle = bind listener + repeat when held
+      bindle = [
+        # Volume controls
+        ", XF86AudioRaiseVolume, exec, wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+"
+        ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
+
+        # Brightness controls
+        ", XF86MonBrightnessUp, exec, brightnessctl set 5%+"
+        ", XF86MonBrightnessDown, exec, brightnessctl set 5%-"
+      ];
+
+      bindl = [
+        # Mute
+        ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+        ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
+
+        # Media controls
+        ", XF86AudioPlay, exec, playerctl play-pause"
+        ", XF86AudioPause, exec, playerctl play-pause"
+        ", XF86AudioNext, exec, playerctl next"
+        ", XF86AudioPrev, exec, playerctl previous"
       ];
 
       # Gestures - Hyprland 0.53+ syntax
