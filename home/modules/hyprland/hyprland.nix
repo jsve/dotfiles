@@ -262,12 +262,11 @@ in
         "$mainMod, mouse:273, resizewindow"
       ];
 
-      # Gestures - new syntax: gesture = fingers, direction, action, options
-      # Swipe left/right to switch workspaces
-      gesture = [
-        "3, l, workspace, -1"
-        "3, r, workspace, +1"
-      ];
+      # Gestures - Hyprland 0.53+ syntax
+      # gesture = fingers, direction, action
+      # direction: horizontal (left/right), vertical (up/down)
+      # For workspace switching, use "horizontal" with the workspace action
+      gesture = "3, horizontal, workspace";
     };
   };
 }
