@@ -231,6 +231,22 @@ setup-shell:
     echo "✓ Zsh is already your default shell"
   fi
 
+# Configure PAM for hyprlock (required on non-NixOS)
+# Nix's linux-pam is patched for NixOS paths, breaking auth on other distros.
+# See: https://github.com/nix-community/home-manager/issues/7027
+[group('nix')]
+[linux]
+setup-hyprlock:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  if [ -f /etc/pam.d/hyprlock ]; then
+    echo "✓ /etc/pam.d/hyprlock already exists"
+  else
+    echo "Creating /etc/pam.d/hyprlock (sudo required)"
+    echo "auth include login" | sudo tee /etc/pam.d/hyprlock >/dev/null
+    echo "✓ PAM configured. hyprlock can now authenticate."
+  fi
+
 
 ## manual command for initial bootstrapping
 ## sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)

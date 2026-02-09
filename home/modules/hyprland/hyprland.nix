@@ -17,7 +17,16 @@ let
   hyprpolkitagent = config.lib.nixGL.wrap pkgs.hyprpolkitagent;
 
   # hyprlock - GPU-accelerated lock screen for Hyprland with custom Catppuccin styling
-  hyprlock = pkgs.hyprlock;
+  # PAM fix for non-NixOS: Nix's linux-pam hardcodes /run/wrappers/bin/unix_chkpwd (NixOS-only).
+  # We patch it to use /usr/bin/unix_chkpwd (Fedora's location).
+  # See: https://github.com/nix-community/home-manager/issues/7027
+  patchedPam = pkgs.linux-pam.overrideAttrs (old: {
+    postPatch = ''
+      substituteInPlace modules/module-meson.build \
+        --replace-fail "sbindir / 'unix_chkpwd'" "'/usr/bin/unix_chkpwd'"
+    '';
+  });
+  hyprlock = pkgs.hyprlock.override { pam = patchedPam; };
 
   # hypridle - Idle daemon for Hyprland that triggers lock/sleep on inactivity
   hypridle = pkgs.hypridle;
@@ -64,6 +73,22 @@ in
     hyprpolkitagent
     hypridle
   ];
+
+  # Enable hypridle service to start automatically on login
+  systemd.user.services.hypridle = {
+    Unit = {
+      Description = "Hyprland idle daemon";
+      After = [ "graphical-session.target" ];
+      PartOf = [ "graphical-session.target" ];
+    };
+    Service = {
+      ExecStart = "${hypridle}/bin/hypridle";
+      Restart = "on-failure";
+    };
+    Install = {
+      WantedBy = [ "graphical-session.target" ];
+    };
+  };
 
   # GNOME Keyring - Secret Service for credential storage
   # Provides the D-Bus Secret Service API that apps like GitHub Desktop use.
@@ -215,9 +240,6 @@ in
         # Polkit agent for authentication dialogs (sudo prompts)
         "systemctl --user start hyprpolkitagent"
 
-        # Idle daemon - monitors inactivity and triggers lock/sleep
-        "systemctl --user start hypridle"
-
         # Status bar
         "waybar"
       ];
@@ -240,6 +262,9 @@ in
         "$mainMod, SPACE, exec, $menu"
         "$mainMod, P, pseudo"
         "$mainMod, J, togglesplit"
+
+        # Lock screen
+        "$mainMod, Escape, exec, hyprlock"
 
         # Move focus
         "$mainMod, left, movefocus, l"
@@ -324,4 +349,15 @@ in
       gesture = "3, horizontal, workspace";
     };
   };
+
+  # Warn if /etc/pam.d/hyprlock is missing (required for authentication)
+  home.activation.checkHyprlockPam = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if [ ! -f /etc/pam.d/hyprlock ]; then
+      echo ""
+      echo "WARNING: /etc/pam.d/hyprlock does not exist!"
+      echo "hyprlock will not be able to authenticate without it."
+      echo "Run: just setup-hyprlock"
+      echo ""
+    fi
+  '';
 }
