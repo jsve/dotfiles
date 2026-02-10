@@ -17,16 +17,18 @@ let
   hyprpolkitagent = config.lib.nixGL.wrap pkgs.hyprpolkitagent;
 
   # hyprlock - GPU-accelerated lock screen for Hyprland with custom Catppuccin styling
-  # PAM fix for non-NixOS: Nix's linux-pam hardcodes /run/wrappers/bin/unix_chkpwd (NixOS-only).
-  # We patch it to use /usr/bin/unix_chkpwd (Fedora's location).
-  # See: https://github.com/nix-community/home-manager/issues/7027
+  # Two fixes needed for non-NixOS:
+  # 1. PAM fix: Nix's linux-pam hardcodes /run/wrappers/bin/unix_chkpwd (NixOS-only).
+  #    We patch it to use /usr/bin/unix_chkpwd (Fedora's location).
+  #    See: https://github.com/nix-community/home-manager/issues/7027
+  # 2. nixGL wrapping: hyprlock needs GPU access for rendering
   patchedPam = pkgs.linux-pam.overrideAttrs (old: {
     postPatch = ''
       substituteInPlace modules/module-meson.build \
         --replace-fail "sbindir / 'unix_chkpwd'" "'/usr/bin/unix_chkpwd'"
     '';
   });
-  hyprlock = pkgs.hyprlock.override { pam = patchedPam; };
+  hyprlock = config.lib.nixGL.wrap (pkgs.hyprlock.override { pam = patchedPam; });
 
   # hypridle - Idle daemon for Hyprland that triggers lock/sleep on inactivity
   hypridle = pkgs.hypridle;
