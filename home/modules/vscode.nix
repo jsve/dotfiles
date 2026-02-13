@@ -4,6 +4,9 @@
     enable = true;
     mutableExtensionsDir = true;
 
+    # userSettings managed outside of nix. use `just vscode-push` and `just vscode-pull` to sync.
+    # see configs/vscode/settings.json
+
     profiles.default = {
       enableUpdateCheck = true;
       enableExtensionUpdateCheck = true;
@@ -52,34 +55,6 @@
           # yoavbls.pretty-ts-errors
         ]
       );
-
-      userSettings = {
-        # IDE
-        # "files.trimTrailingWhitespace" = true;
-        "editor.formatOnSave" = true;
-        "json.format.keepLines" = true;
-
-        #CH
-        "eslint.format.enable" = true;
-        "typescript.format.enable" = false;
-        "[javascript]"."editor.defaultFormatter" = "dbaeumer.vscode-eslint";
-
-        # TELEMETRY
-        "aws.telemetry" = false;
-        "telemetry.editStats.enabled" = false;
-        "gitlens.telemetry.enabled" = false;
-        "telemetry.feedback.enabled" = false;
-        "redhat.telemetry.enabled" = false;
-        "stripe.telemetry.enabled" = false;
-
-        # "explorer.confirmDragAndDrop" = false;
-
-        # # Misc
-        # "[nix]"."editor.tabSize" = 2;
-        # "yaml.format.enable" = false;
-        # "[markdown]"."files.trimTrailingWhitespace" = false;
-        # "[env]"."editor.formatOnSave" = false;
-      };
     };
   };
 }

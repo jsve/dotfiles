@@ -248,6 +248,60 @@ setup-hyprlock:
   fi
 
 
+### vscode settings sync
+# Settings are stored in configs/vscode/settings.json and synced via merge.
+# Push: repo keys win, but runtime additions (from extensions) are preserved.
+# Pull: current VS Code settings are saved back to the repo for committing.
+
+vscode_settings := if os() == "macos" {
+    home_directory() / "Library/Application Support/Code/User/settings.json"
+} else {
+    home_directory() / ".config/Code/User/settings.json"
+}
+
+# Merge repo vscode settings into VS Code (repo keys win, runtime additions preserved)
+[group('vscode')]
+vscode-push:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  repo_settings="{{justfile_directory()}}/configs/vscode/settings.json"
+  vscode_settings="{{vscode_settings}}"
+
+  if [ ! -f "$repo_settings" ]; then
+    echo "Error: $repo_settings not found"
+    exit 1
+  fi
+
+  # Read current VS Code settings (follows symlinks), default to empty object
+  current=$(cat "$vscode_settings" 2>/dev/null || echo '{}')
+
+  # Deep merge: current settings as base, repo settings override conflicts
+  merged=$(echo "$current" | jq -s '.[0] * .[1]' - "$repo_settings")
+
+  # Replace symlink with regular file if needed (leftover from home-manager)
+  [ -L "$vscode_settings" ] && rm "$vscode_settings"
+
+  mkdir -p "$(dirname "$vscode_settings")"
+  echo "$merged" > "$vscode_settings"
+  echo "VS Code settings updated (merged from repo)"
+
+# Save current VS Code settings back to repo
+[group('vscode')]
+vscode-pull:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  repo_settings="{{justfile_directory()}}/configs/vscode/settings.json"
+  vscode_settings="{{vscode_settings}}"
+
+  if [ ! -f "$vscode_settings" ] && [ ! -L "$vscode_settings" ]; then
+    echo "Error: No VS Code settings found at $vscode_settings"
+    exit 1
+  fi
+
+  mkdir -p "$(dirname "$repo_settings")"
+  jq '.' "$vscode_settings" > "$repo_settings"
+  echo "VS Code settings saved to repo"
+
 ## manual command for initial bootstrapping
 ## sh <(curl --proto '=https' --tlsv1.2 -L https://nixos.org/nix/install)
 ## nix --extra-experimental-features 'nix-command flakes' run nixpkgs#just

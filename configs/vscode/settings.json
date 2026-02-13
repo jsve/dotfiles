@@ -1,0 +1,18 @@
+{
+  "editor.formatOnSave": true,
+  "json.format.keepLines": true,
+
+  "eslint.format.enable": true,
+  "typescript.format.enable": false,
+  "[javascript]": {
+    "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+  },
+  "claudeCode.selectedModel": "opus",
+
+  "aws.telemetry": false,
+  "telemetry.editStats.enabled": false,
+  "gitlens.telemetry.enabled": false,
+  "telemetry.feedback.enabled": false,
+  "redhat.telemetry.enabled": false,
+  "stripe.telemetry.enabled": false
+}

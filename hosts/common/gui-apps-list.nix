@@ -20,6 +20,7 @@
   # Darwin-specific GUI apps (Homebrew casks)
   darwin = [
     "1password"
+    "claude-code"
     "google-chrome"
     # "karabiner-elements"
     "fluor"
