@@ -25,7 +25,7 @@
 
     # ch:
     nodejs_20
-    python310
+    python313
     pnpm_8
     # yarn # installs it's own version of node. don't use it for now.
     # pnpm_8 # installs it's own version of node. don't use it for now.
