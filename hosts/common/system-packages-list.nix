@@ -10,11 +10,12 @@ with pkgs;
   ## stable
   # act
   # ansible
-  # btop
+  btop # System monitor with temperatures
   coreutils # GNU core utils
   # diffr # Modern Unix `diff`
   # difftastic # Modern Unix `diff`
   # drill
+  lm_sensors # Temperature sensor readings
   # dust # Modern Unix `du`
   # dua # Modern Unix `du`
   # duf # Modern Unix `df`
