@@ -130,6 +130,7 @@ in
       '')
     ]
     ++ (with pkgs; [
+      lm_sensors # Temperature sensor readings (Linux-only)
       # Fun ASCII/terminal toys (JsFlowdora only for now)
       cowsay
       sl
