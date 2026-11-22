@@ -69,7 +69,7 @@ Configuration is in the dotfiles repo:
 
 The `wayland.windowManager.hyprland` home-manager module handles:
 - Installing hyprland (nixGL wrapping handled by `start-hyprland` at launch)
-- Generating `~/.config/hypr/hyprland.conf` from nix settings
+- Generating `~/.config/hypr/hyprland.lua` and deploying `home/modules/hyprland/hyprland.lua` as `~/.config/hypr/config.lua`
 - Setting up xdg-desktop-portal-hyprland
 
 **How nixGL works:** Since Hyprland 0.53.2, `start-hyprland` auto-detects Nix-built Hyprland on non-NixOS and wraps it via `execvp("nixGL", ...)`. We provide the `nixGL` binary by creating a wrapper script (in `linux-common.nix`) that delegates to `nixGLMesa` from home-manager's nixGL module. The GDM session entry uses `start-hyprland` instead of `Hyprland` directly, which also provides watchdog crash-restart. Other GUI apps (Waybar, Ghostty) still use home-manager's `config.lib.nixGL.wrap` for their own wrapping.

@@ -72,7 +72,7 @@ in
   # - /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh lines 34-39 (Nix's own solution for shells)
   # - XDG Base Directory Specification: https://specifications.freedesktop.org/basedir-spec/latest/
   # - systemd environment.d: man systemd-environment-d-generator(8)
-  systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.isLinux {
+  systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
     PATH = "$HOME/.nix-profile/bin:$PATH";
   };
 
@@ -126,7 +126,7 @@ in
       # See: hosts/linux/JsFlowdora/fedora-setup.md for full explanation
       (pkgs.runCommand "nixGL" { } ''
         mkdir -p $out/bin
-        cp ${nixGL.packages.${pkgs.system}.nixGLIntel}/bin/* $out/bin/nixGL
+        cp ${nixGL.packages.${pkgs.stdenv.hostPlatform.system}.nixGLIntel}/bin/* $out/bin/nixGL
       '')
     ]
     ++ (with pkgs; [
