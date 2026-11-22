@@ -76,19 +76,21 @@ in
     hypridle
   ];
 
-  # Enable hypridle service to start automatically on login
+  # Start hypridle with Hyprland sessions only. hyprland-session.target is created by
+  # home-manager's Hyprland module and started from inside Hyprland; binding to
+  # graphical-session.target instead made hypridle start (and fail) under GNOME.
   systemd.user.services.hypridle = {
     Unit = {
       Description = "Hyprland idle daemon";
-      After = [ "graphical-session.target" ];
-      PartOf = [ "graphical-session.target" ];
+      After = [ "hyprland-session.target" ];
+      PartOf = [ "hyprland-session.target" ];
     };
     Service = {
       ExecStart = "${hypridle}/bin/hypridle";
       Restart = "on-failure";
     };
     Install = {
-      WantedBy = [ "graphical-session.target" ];
+      WantedBy = [ "hyprland-session.target" ];
     };
   };
 
