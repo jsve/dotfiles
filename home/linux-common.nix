@@ -150,4 +150,13 @@ in
       echo ""
     fi
   '';
+
+  # `just setup-shell` points the login shell at ~/.nix-profile/bin/zsh;
+  # removing zsh from the profile would leave the account without a shell.
+  assertions = [
+    {
+      assertion = config.programs.zsh.enable;
+      message = "programs.zsh is disabled, but the login shell may be ~/.nix-profile/bin/zsh (set by `just setup-shell`). Run 'chsh -s /bin/bash' first, then remove this assertion.";
+    }
+  ];
 }
