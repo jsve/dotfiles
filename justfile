@@ -217,10 +217,17 @@ verify_grub_llm:
 setup-shell:
   #!/usr/bin/env bash
   set -euo pipefail
-  ZSH_PATH="$(readlink -f ~/.nix-profile/bin/zsh)"
-  if [ "$SHELL" != "$ZSH_PATH" ]; then
+  # Use the profile symlink, not the resolved /nix/store path: the store path
+  # changes when zsh is rebuilt and is deleted by `just gc`, leaving no login shell.
+  ZSH_PATH="$HOME/.nix-profile/bin/zsh"
+  if [ ! -x "$ZSH_PATH" ]; then
+    echo "Error: $ZSH_PATH not found. Run 'just switch' first."
+    exit 1
+  fi
+  CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
+  if [ "$CURRENT_SHELL" != "$ZSH_PATH" ]; then
     echo "Setting up zsh as default shell..."
-    if ! grep -qx "$ZSH_PATH" /etc/shells 2>/dev/null; then
+    if ! grep -Fqx "$ZSH_PATH" /etc/shells 2>/dev/null; then
       echo "Adding $ZSH_PATH to /etc/shells (sudo required)"
       echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
     fi
