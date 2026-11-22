@@ -140,23 +140,14 @@ in
 
   # Check if zsh is the default shell and inform user how to set it up
   # Reference: https://wiki.nixos.org/wiki/Command_Shell#Changing_the_default_shell
-  # Compares against the stable profile symlink (see `just setup-shell`), reading the
-  # account's shell directly since $SHELL is only updated at login.
+  # Must match the path `just setup-shell` sets (the stable profile symlink).
   home.activation.checkDefaultShell = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    zsh_path="${config.home.profileDirectory}/bin/zsh"
-    if [ "$(/usr/bin/getent passwd "$USER" | cut -d: -f7)" != "$zsh_path" ]; then
+    zsh_path="$HOME/.nix-profile/bin/zsh"
+    if [ "$SHELL" != "$zsh_path" ]; then
       echo ""
       echo "ℹ️  Zsh is not your default shell yet."
       echo "   Run: just setup-shell"
       echo ""
     fi
   '';
-
-  # The login shell points into the home-manager profile; removing zsh from it would leave no shell.
-  assertions = [
-    {
-      assertion = config.programs.zsh.enable;
-      message = "The login shell is ~/.nix-profile/bin/zsh. Run 'chsh -s /bin/bash' before disabling programs.zsh.";
-    }
-  ];
 }

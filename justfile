@@ -224,10 +224,9 @@ setup-shell:
     echo "Error: $ZSH_PATH not found. Run 'just switch' first."
     exit 1
   fi
-  CURRENT_SHELL="$(getent passwd "$USER" | cut -d: -f7)"
-  if [ "$CURRENT_SHELL" != "$ZSH_PATH" ]; then
+  if [ "$SHELL" != "$ZSH_PATH" ]; then
     echo "Setting up zsh as default shell..."
-    if ! grep -Fqx "$ZSH_PATH" /etc/shells 2>/dev/null; then
+    if ! grep -qx "$ZSH_PATH" /etc/shells 2>/dev/null; then
       echo "Adding $ZSH_PATH to /etc/shells (sudo required)"
       echo "$ZSH_PATH" | sudo tee -a /etc/shells >/dev/null
     fi
