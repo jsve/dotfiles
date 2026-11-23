@@ -1,4 +1,6 @@
-# Claude Code for all Linux machines (Fedora host and the NixOS VMs).
+# Claude Code for Linux, as a home-manager module (imported from linux-common.nix).
+# A NixOS VM that uses home-manager can import this file directly; it needs unfree
+# packages allowed. Without home-manager, put the same override in its system packages.
 #
 # Uses the nixpkgs packaging (wrapper, runtime dependencies) but takes the version
 # and checksums from ./manifest.json, which is Anthropic's own release manifest.

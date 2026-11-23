@@ -74,10 +74,11 @@ switch target_host=hostname: (build target_host)
 update:
   nix flake update
 
-# Update only Claude Code, to the newest release on a channel ("latest" or "stable").
-# Downloads Anthropic's release manifest, verifies its signature against the key pinned
-# in home/modules/claude-code/release-key.asc, and only then replaces manifest.json.
-# Follow with `just switch`: only Claude Code is re-downloaded.
+# Downloads Anthropic's release manifest for a channel ("latest" or "stable"), verifies
+# its signature against the key pinned in home/modules/claude-code/release-key.asc, and
+# only then replaces manifest.json. Afterwards run `just switch` on the Linux machines;
+# only Claude Code is re-downloaded. (The Macs get Claude Code from Homebrew instead.)
+[doc('Update only Claude Code (Linux) to the newest signed release; channel is "latest" or "stable"')]
 [group('nix')]
 update-claude channel="latest":
   #!/usr/bin/env bash
@@ -89,6 +90,10 @@ update-claude channel="latest":
   TMP="$(mktemp -d)"
   trap 'rm -rf "$TMP"' EXIT
   VERSION="$(curl -fsSL "$BASE_URL/{{channel}}")"
+  if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: channel '{{channel}}' did not return a version number."
+    exit 1
+  fi
   curl -fsSL "$BASE_URL/$VERSION/manifest.zst.json" -o "$TMP/manifest.json"
   curl -fsSL "$BASE_URL/$VERSION/manifest.zst.json.sig" -o "$TMP/manifest.json.sig"
   export GNUPGHOME="$TMP/gnupg"
@@ -99,8 +104,16 @@ update-claude channel="latest":
     echo "Error: signature check failed for the $VERSION manifest; manifest.json left unchanged."
     exit 1
   fi
+  # The signature only proves Anthropic signed this file at some point. Also require that
+  # it is the manifest for the version we asked for, in the format the nix package expects,
+  # so an older or different signed manifest served in its place is rejected.
+  if ! grep -Fq "\"version\": \"$VERSION\"" "$TMP/manifest.json" \
+      || ! grep -Fq '"binary": "claude.zst"' "$TMP/manifest.json"; then
+    echo "Error: the signed manifest is not the expected one for $VERSION; manifest.json left unchanged."
+    exit 1
+  fi
   cp "$TMP/manifest.json" "$DIR/manifest.json"
-  echo "✓ Claude Code manifest set to $VERSION ({{channel}}), signature verified. Run 'just switch' to install."
+  echo "✓ Claude Code manifest set to $VERSION ({{channel}}), signature verified. Run 'just switch' on the Linux machines to install."
 
 
 # Garbage collect old OS generations and remove stale packages from the nix store
