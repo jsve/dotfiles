@@ -39,6 +39,10 @@ let
   );
 in
 {
+  imports = [
+    ./modules/claude-code
+  ];
+
   # Enable generic Linux target for better integration on non-NixOS (Fedora)
   targets.genericLinux.enable = true;
 

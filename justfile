@@ -74,6 +74,34 @@ switch target_host=hostname: (build target_host)
 update:
   nix flake update
 
+# Update only Claude Code, to the newest release on a channel ("latest" or "stable").
+# Downloads Anthropic's release manifest, verifies its signature against the key pinned
+# in home/modules/claude-code/release-key.asc, and only then replaces manifest.json.
+# Follow with `just switch`: only Claude Code is re-downloaded.
+[group('nix')]
+update-claude channel="latest":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  BASE_URL="https://downloads.claude.ai/claude-code-releases"
+  FINGERPRINT="31DDDE24DDFAB679F42D7BD2BAA929FF1A7ECACE"
+  DIR="{{justfile_directory()}}/home/modules/claude-code"
+  if command -v gpg >/dev/null; then GPG=(gpg); else GPG=(nix run nixpkgs#gnupg --); fi
+  TMP="$(mktemp -d)"
+  trap 'rm -rf "$TMP"' EXIT
+  VERSION="$(curl -fsSL "$BASE_URL/{{channel}}")"
+  curl -fsSL "$BASE_URL/$VERSION/manifest.zst.json" -o "$TMP/manifest.json"
+  curl -fsSL "$BASE_URL/$VERSION/manifest.zst.json.sig" -o "$TMP/manifest.json.sig"
+  export GNUPGHOME="$TMP/gnupg"
+  mkdir -m 700 "$GNUPGHOME"
+  "${GPG[@]}" --batch --quiet --import "$DIR/release-key.asc"
+  if ! "${GPG[@]}" --batch --status-fd 1 --verify "$TMP/manifest.json.sig" "$TMP/manifest.json" 2>/dev/null \
+      | grep -q "^\[GNUPG:\] VALIDSIG $FINGERPRINT "; then
+    echo "Error: signature check failed for the $VERSION manifest; manifest.json left unchanged."
+    exit 1
+  fi
+  cp "$TMP/manifest.json" "$DIR/manifest.json"
+  echo "✓ Claude Code manifest set to $VERSION ({{channel}}), signature verified. Run 'just switch' to install."
+
 
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:
