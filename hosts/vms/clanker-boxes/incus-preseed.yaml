@@ -1,0 +1,39 @@
+# Incus first-time setup for the clanker boxes, applied by `just clanker-host-init`
+# (incus admin init --preseed). Safe to re-apply: existing entries are updated.
+#
+# Nothing secret belongs here; this repo is public.
+
+networks:
+  # Private NAT bridge for the VMs. Not yet locked down: guests can still reach
+  # the host and the LAN until network ACLs are added.
+  - name: clankbr0
+    type: bridge
+    config:
+      ipv4.address: 10.83.0.1/24
+      ipv4.nat: "true"
+      ipv6.address: none
+
+storage_pools:
+  # Plain directory under /var/lib/incus. Simple, but snapshots are full copies;
+  # switch to the btrfs driver if snapshots become routine.
+  - name: clanker
+    driver: dir
+
+profiles:
+  - name: clanker-box
+    description: Sandboxed coding-agent VM
+    config:
+      limits.cpu: "8"
+      limits.memory: 16GiB
+      # The NixOS image is not signed for secure boot.
+      security.secureboot: "false"
+    devices:
+      root:
+        type: disk
+        path: /
+        pool: clanker
+        size: 50GiB
+      eth0:
+        type: nic
+        name: eth0
+        network: clankbr0

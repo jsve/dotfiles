@@ -72,6 +72,14 @@
           username = "johan";
         };
       };
+
+      # NixOS guests for sandboxed coding-agent VMs on JsFlowdora (see `just clanker-image`).
+      nixosConfigurations = {
+        clanker-boxes-base = nixpkgs.lib.nixosSystem {
+          system = "x86_64-linux";
+          modules = [ ./hosts/vms/clanker-boxes/base.nix ];
+        };
+      };
     };
 
 }
