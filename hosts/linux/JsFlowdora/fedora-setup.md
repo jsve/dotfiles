@@ -44,6 +44,10 @@ set FastConnectable = true (was = false and commented)
 
 set TemporaryTimeout = 0 (was = 30 and commented)
 
+## Power profiles
+
+GNOME power modes (via tuned-ppd) set the ASUS firmware profile: Power saver → `quiet`, Balanced → `balanced`, Performance → `performance`. Each sets real power limits, not just fans. Measured under CPU stress: Balanced holds ~52 W; Performance peaks ~85 W, then holds ~70 W.
+
 ## Hyprland (via Nix + home-manager)
 
 Reference: https://gist.github.com/AntonFriberg/1dcb1ee6bf2c92c5f641a6f764d582d9
