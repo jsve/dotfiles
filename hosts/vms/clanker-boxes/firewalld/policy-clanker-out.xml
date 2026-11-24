@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Installed to /etc/firewalld/policies/clanker-out.xml by `just flowdora clanker-host-setup`.
+     What a clanker box may reach through the host: the public internet, but no
+     private, VPN or link-local range (the LAN, Tailscale/NetBird, other subnets). -->
+<policy target="ACCEPT">
+  <short>Clanker boxes outbound</short>
+  <description>Traffic forwarded from the clanker bridge: internet allowed, private networks rejected.</description>
+  <ingress-zone name="clanker"/>
+  <egress-zone name="ANY"/>
+  <rule family="ipv4"><destination address="10.0.0.0/8"/><reject/></rule>
+  <rule family="ipv4"><destination address="172.16.0.0/12"/><reject/></rule>
+  <rule family="ipv4"><destination address="192.168.0.0/16"/><reject/></rule>
+  <rule family="ipv4"><destination address="100.64.0.0/10"/><reject/></rule>
+  <rule family="ipv4"><destination address="169.254.0.0/16"/><reject/></rule>
+  <rule family="ipv6"><destination address="fc00::/7"/><reject/></rule>
+  <rule family="ipv6"><destination address="fe80::/10"/><reject/></rule>
+</policy>
