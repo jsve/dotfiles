@@ -19,5 +19,5 @@
   <rule family="ipv4"><destination address="240.0.0.0/4"/><reject/></rule>
   <!-- The bridge has no IPv6 today. If it ever gets it, nothing is allowed until
        rules are written for it on purpose. -->
-  <rule family="ipv6"><reject/></rule>
+  <rule family="ipv6"><destination address="::/0"/><reject/></rule>
 </policy>
