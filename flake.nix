@@ -73,7 +73,7 @@
         };
       };
 
-      # NixOS guests for sandboxed coding-agent VMs on JsFlowdora (see `just clanker-image`).
+      # NixOS guests for sandboxed coding-agent VMs on JsFlowdora (see `just flowdora clanker-image`).
       nixosConfigurations = {
         clanker-boxes-base = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";

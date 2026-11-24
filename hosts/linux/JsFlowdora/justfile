@@ -26,7 +26,7 @@ prepare_grub_for_llm:
   # Check if a vLLM Mode entry already exists (need sudo to read the directory)
   if sudo test -f "$VLLM_ENTRY"; then
     echo "A vLLM Mode GRUB entry already exists: $VLLM_ENTRY"
-    echo "Run 'just remove_grub_llm' first if you want to recreate it."
+    echo "Run 'just flowdora remove_grub_llm' first if you want to recreate it."
     exit 1
   fi
   
@@ -70,7 +70,7 @@ prepare_grub_for_llm:
   echo "✓ Default boot entry unchanged (index $DEFAULT_INDEX)"
   echo ""
   echo "On next boot, select '$TITLE' from the GRUB menu to use GPU memory settings."
-  echo "After booting into vLLM Mode, verify with: just verify_grub_llm"
+  echo "After booting into vLLM Mode, verify with: just flowdora verify_grub_llm"
 
 # Remove the vLLM Mode GRUB boot entry
 # Removes entries with "00000000000000000000000000000000-vllm-" prefix (and legacy entries)
@@ -144,12 +144,33 @@ clanker-host-setup:
   sudo incus admin init --preseed < "$boxes/incus-preseed.yaml"
   # Host firewall for the bridge: without the zone, firewalld blocks DHCP and DNS and
   # guests get no address; the policy lets them out to the internet but not the LAN.
-  sudo /usr/bin/install -m 0644 "$boxes/firewalld/zone-clanker.xml" /etc/firewalld/zones/clanker.xml
-  sudo /usr/bin/install -m 0644 "$boxes/firewalld/policy-clanker-out.xml" /etc/firewalld/policies/clanker-out.xml
+  zone=/etc/firewalld/zones/clanker.xml
+  policy=/etc/firewalld/policies/clanker-out.xml
+  # Keep the working files so a broken edit can be rolled back: a zone file that fails
+  # to load would drop the bridge into the default zone, which opens host ports to guests.
+  for f in "$zone" "$policy"; do
+    if sudo test -f "$f"; then sudo cp -p "$f" "$f.previous"; else sudo rm -f "$f.previous"; fi
+  done
+  sudo /usr/bin/install -m 0644 "$boxes/firewalld/zone-clanker.xml" "$zone"
+  sudo /usr/bin/install -m 0644 "$boxes/firewalld/policy-clanker-out.xml" "$policy"
   sudo restorecon -R /etc/firewalld
-  sudo firewall-cmd --check-config
+  if ! sudo firewall-cmd --check-config; then
+    for f in "$zone" "$policy"; do
+      if sudo test -f "$f.previous"; then sudo mv "$f.previous" "$f"; else sudo rm -f "$f"; fi
+    done
+    echo "Error: the new firewalld files are invalid; put the previous ones back and did not reload." >&2
+    exit 1
+  fi
+  sudo rm -f "$zone.previous" "$policy.previous"
   sudo firewall-cmd --reload
-  echo "✓ Incus installed; bridge, storage pool, profile and firewall rules applied."
+  # The isolation only holds while the bridge is in the clanker zone and the policy is loaded.
+  bridge_zone="$(sudo firewall-cmd --get-zone-of-interface=clankbr0 || true)"
+  if [ "$bridge_zone" != "clanker" ] || ! sudo firewall-cmd --get-policies | tr ' ' '\n' | grep -qx clanker-out; then
+    echo "Error: clankbr0 is in zone '${bridge_zone:-none}' or the clanker-out policy is missing." >&2
+    echo "Guests are NOT confined. Stop them (incus stop --all) until this is fixed." >&2
+    exit 1
+  fi
+  echo "✓ Incus installed; bridge, storage pool, profile and firewall rules applied and checked."
   # incus-admin lets you run incus without sudo. It is root-equivalent on this machine.
   if ! id -nG "$USER" | tr ' ' '\n' | grep -qx incus-admin; then
     sudo usermod -aG incus-admin "$USER"

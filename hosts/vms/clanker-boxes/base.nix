@@ -1,5 +1,5 @@
 # clanker-boxes-base: the shared NixOS guest for sandboxed coding-agent VMs.
-# Built into an Incus VM image by `just clanker-image` and run on JsFlowdora.
+# Built into an Incus VM image by `just flowdora clanker-image` and run on JsFlowdora.
 # Per-VM (robot-named) configs will import this file and add project packages.
 #
 # This repo is public and the Nix store is readable by every user of a machine,
@@ -29,6 +29,10 @@
   # The agents run as this user. It has no password and no sudo; the host
   # administers the VM as root through `incus exec`, so there is no SSH server.
   users.mutableUsers = false;
+  # The Incus image module gives root an empty password; lock it instead. Nobody can
+  # log in with a password at all, hence allowNoPasswordLogin.
+  users.users.root.hashedPassword = lib.mkForce "!";
+  users.allowNoPasswordLogin = true;
   users.users.clanker = {
     isNormalUser = true;
     uid = 1000;

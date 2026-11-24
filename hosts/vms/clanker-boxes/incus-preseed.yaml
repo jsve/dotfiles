@@ -1,5 +1,6 @@
 # Incus first-time setup for the clanker boxes, applied by `just flowdora clanker-host-setup`
-# (incus admin init --preseed). Safe to re-apply: existing entries are updated.
+# (incus admin init --preseed). Safe to re-apply, but each entry is replaced as a
+# whole: settings made by hand with `incus ... set` are lost, so keep them all here.
 #
 # Nothing secret belongs here; this repo is public.
 
@@ -35,7 +36,9 @@ profiles:
         size: 50GiB
       eth0:
         type: nic
-        name: eth0
         network: clankbr0
-        # Guests on the bridge cannot talk to each other, only to the host.
+        # Guests using this profile cannot talk to each other, only to the host.
         security.port_isolation: "true"
+        # A guest may only use the MAC and IPv4 address Incus gave it, so it cannot
+        # impersonate another guest to the host and capture its traffic.
+        security.ipv4_filtering: "true"
