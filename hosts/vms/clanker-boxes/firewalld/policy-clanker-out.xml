@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Installed to /etc/firewalld/policies/clanker-out.xml by `just flowdora clanker-host-setup`.
+     What a clanker box may reach through the host: the public IPv4 internet, but no
+     private, VPN, link-local or reserved range (the LAN, Tailscale/NetBird, other subnets). -->
+<!-- The priority puts this policy ahead of any other policy that might accept the same
+     traffic (the default is -1, and order between equal priorities is undefined). -->
+<policy target="ACCEPT" priority="-1000">
+  <short>Clanker boxes outbound</short>
+  <description>Traffic forwarded from the clanker bridge: internet allowed, private networks rejected.</description>
+  <ingress-zone name="clanker"/>
+  <egress-zone name="ANY"/>
+  <rule family="ipv4"><destination address="10.0.0.0/8"/><reject/></rule>
+  <rule family="ipv4"><destination address="172.16.0.0/12"/><reject/></rule>
+  <rule family="ipv4"><destination address="192.168.0.0/16"/><reject/></rule>
+  <rule family="ipv4"><destination address="100.64.0.0/10"/><reject/></rule>
+  <rule family="ipv4"><destination address="169.254.0.0/16"/><reject/></rule>
+  <rule family="ipv4"><destination address="192.0.0.0/24"/><reject/></rule>
+  <rule family="ipv4"><destination address="198.18.0.0/15"/><reject/></rule>
+  <rule family="ipv4"><destination address="240.0.0.0/4"/><reject/></rule>
+  <!-- The bridge has no IPv6 today. If it ever gets it, nothing is allowed until
+       rules are written for it on purpose. -->
+  <rule family="ipv6"><destination address="::/0"/><reject/></rule>
+</policy>

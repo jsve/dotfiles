@@ -1,0 +1,201 @@
+# Recipes specific to the JsFlowdora machine, loaded as the `flowdora` module by the
+# justfile at the repo root: `just flowdora <recipe>`, `just --list flowdora`.
+# Module recipes run in this directory, not the repo root; justfile_directory() is
+# still the repo root, so use it for repo paths.
+
+### LLM workloads
+# Add a GRUB boot entry with kernel parameters for vLLM/LLM workloads on AMD Strix Halo
+# This creates a separate boot menu entry so you can choose when to boot with GPU memory settings
+# Parameters: iommu=pt, amdgpu.gttsize=126976, ttm.pages_limit=32505856 (124 GiB for iGPU)
+# Source: https://github.com/kyuz0/amd-strix-halo-vllm-toolboxes
+[group('llm')]
+[linux]
+prepare_grub_for_llm:
+  #!/usr/bin/env bash
+  set -eu
+  
+  ENTRIES_DIR="/boot/loader/entries"
+  KERNEL_VERSION="$(uname -r)"
+  KERNEL="/boot/vmlinuz-$KERNEL_VERSION"
+  TITLE="Fedora Linux ($KERNEL_VERSION) vLLM Mode"
+  ARGS="iommu=pt amdgpu.gttsize=126976 ttm.pages_limit=32505856"
+  # Use all-zeros machine-id prefix so it sorts AFTER regular Fedora entries (GRUB sorts descending)
+  # grubby requires a 32-char hex prefix to recognize the entry
+  VLLM_ENTRY="$ENTRIES_DIR/00000000000000000000000000000000-vllm-$KERNEL_VERSION.conf"
+  
+  # Check if a vLLM Mode entry already exists (need sudo to read the directory)
+  if sudo test -f "$VLLM_ENTRY"; then
+    echo "A vLLM Mode GRUB entry already exists: $VLLM_ENTRY"
+    echo "Run 'just flowdora remove_grub_llm' first if you want to recreate it."
+    exit 1
+  fi
+  
+  # Get the default boot entry index before we make changes
+  DEFAULT_INDEX=$(sudo grubby --default-index)
+  
+  echo "Creating GRUB boot entry: $TITLE"
+  echo "Based on default entry (index $DEFAULT_INDEX)"
+  echo "Kernel: $KERNEL"
+  echo "Extra args: $ARGS"
+  echo ""
+  
+  # --copy-default: copy args/initrd from default entry
+  # --add-kernel: required by grubby, points to same kernel
+  # --title: our custom title with "vLLM Mode" marker
+  # --args: additional args to append
+  # Note: grubby returns non-zero when entry exists but still creates the custom file
+  sudo grubby --copy-default \
+    --add-kernel="$KERNEL" \
+    --title="$TITLE" \
+    --args="$ARGS" || true
+  
+  # Find the entry grubby just created (has ~custom in the name)
+  CREATED_ENTRY=$(sudo find "$ENTRIES_DIR" -name "*${KERNEL_VERSION}*custom*" -type f | head -1)
+  
+  if [ -z "$CREATED_ENTRY" ]; then
+    echo "Error: Could not find the created entry file."
+    exit 1
+  fi
+  
+  # Rename to all-zeros machine-id prefix so it sorts after regular Fedora entries
+  sudo mv "$CREATED_ENTRY" "$VLLM_ENTRY"
+  echo "Renamed: $(basename "$CREATED_ENTRY") -> $(basename "$VLLM_ENTRY")"
+  
+  # Restore the original default (grubby may have changed it)
+  sudo grubby --set-default-index="$DEFAULT_INDEX"
+  
+  echo ""
+  echo "✓ GRUB entry created: $TITLE"
+  echo "✓ Entry file: $VLLM_ENTRY"
+  echo "✓ Default boot entry unchanged (index $DEFAULT_INDEX)"
+  echo ""
+  echo "On next boot, select '$TITLE' from the GRUB menu to use GPU memory settings."
+  echo "After booting into vLLM Mode, verify with: just flowdora verify_grub_llm"
+
+# Remove the vLLM Mode GRUB boot entry
+# Removes entries with "00000000000000000000000000000000-vllm-" prefix (and legacy entries)
+[group('llm')]
+[linux]
+remove_grub_llm:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  
+  ENTRIES_DIR="/boot/loader/entries"
+  # Find current (00..00-vllm-) and legacy (0-vllm-, zzz-vllm-) entries
+  VLLM_ENTRIES=$(sudo find "$ENTRIES_DIR" -maxdepth 1 -name "00000000000000000000000000000000-vllm-*.conf" -o -name "0-vllm-*.conf" -o -name "zzz-vllm-*.conf" 2>/dev/null || true)
+  
+  if [ -z "$VLLM_ENTRIES" ]; then
+    echo "No vLLM Mode GRUB entries found."
+    exit 0
+  fi
+  
+  for entry in $VLLM_ENTRIES; do
+    echo "Removing: $entry"
+    sudo rm "$entry"
+  done
+  
+  echo "✓ vLLM Mode GRUB entry removed."
+
+# Verify that vLLM kernel parameters are active (run after booting into vLLM Mode)
+[group('llm')]
+[linux]
+verify_grub_llm:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  
+  echo "Checking kernel command line for vLLM parameters..."
+  echo ""
+  
+  CMDLINE=$(cat /proc/cmdline)
+  MISSING=0
+  
+  for param in "iommu=pt" "amdgpu.gttsize=126976" "ttm.pages_limit=32505856"; do
+    if echo "$CMDLINE" | grep -q "$param"; then
+      echo "✓ $param"
+    else
+      echo "✗ $param (missing)"
+      MISSING=1
+    fi
+  done
+  
+  echo ""
+  if [ $MISSING -eq 0 ]; then
+    echo "All vLLM kernel parameters are active!"
+  else
+    echo "Some parameters are missing. Did you boot into the vLLM Mode entry?"
+  fi
+
+
+### clanker boxes: sandboxed coding-agent VMs (Incus + NixOS guests)
+
+# Installs Incus from Fedora's repos (it is a root system service, so not managed by nix),
+# then creates the network ACL, bridge, storage pool and VM profile, and installs the
+# firewalld zone and policy that confine the bridge. All clanker recipes call incus
+# through sudo: membership of the incus-admin group would let any process running as
+# you become root on this machine without a password.
+# Safe to re-run, e.g. after editing the preseed file.
+[doc('Install Incus and apply the clanker-box network, storage and profile setup (needs sudo)')]
+[group('clanker')]
+[linux]
+clanker-host-setup:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  sudo dnf install -y incus
+  sudo systemctl enable --now incus.socket
+  boxes="{{justfile_directory()}}/hosts/vms/clanker-boxes"
+  # The ACL has to exist before the preseed attaches it to the bridge.
+  sudo incus network acl show clanker >/dev/null 2>&1 || sudo incus network acl create clanker
+  sudo incus network acl edit clanker < "$boxes/incus-acl-clanker.yaml"
+  sudo incus admin init --preseed < "$boxes/incus-preseed.yaml"
+  # Host firewall for the bridge: without the zone, firewalld blocks DHCP and DNS and
+  # guests get no address; the policy lets them out to the internet but not the LAN.
+  zone=/etc/firewalld/zones/clanker.xml
+  policy=/etc/firewalld/policies/clanker-out.xml
+  # Keep the working files so a broken edit can be rolled back: a zone file that fails
+  # to load would drop the bridge into the default zone, which opens host ports to guests.
+  for f in "$zone" "$policy"; do
+    if sudo test -f "$f"; then sudo cp -p "$f" "$f.previous"; else sudo rm -f "$f.previous"; fi
+  done
+  sudo /usr/bin/install -m 0644 "$boxes/firewalld/zone-clanker.xml" "$zone"
+  sudo /usr/bin/install -m 0644 "$boxes/firewalld/policy-clanker-out.xml" "$policy"
+  sudo restorecon -R /etc/firewalld
+  if ! sudo firewall-cmd --check-config; then
+    for f in "$zone" "$policy"; do
+      if sudo test -f "$f.previous"; then sudo mv "$f.previous" "$f"; else sudo rm -f "$f"; fi
+    done
+    echo "Error: the new firewalld files are invalid; put the previous ones back and did not reload." >&2
+    exit 1
+  fi
+  sudo rm -f "$zone.previous" "$policy.previous"
+  sudo firewall-cmd --reload
+  # The isolation only holds while the bridge is in the clanker zone and the policy is loaded.
+  bridge_zone="$(sudo firewall-cmd --get-zone-of-interface=clankbr0 || true)"
+  if [ "$bridge_zone" != "clanker" ] || ! sudo firewall-cmd --get-policies | tr ' ' '\n' | grep -qx clanker-out; then
+    echo "Error: clankbr0 is in zone '${bridge_zone:-none}' or the clanker-out policy is missing." >&2
+    echo "Guests are NOT confined. Stop them (incus stop --all) until this is fixed." >&2
+    exit 1
+  fi
+  echo "✓ Incus installed; bridge, storage pool, profile and firewall rules applied and checked."
+  if id -nG "$USER" | tr ' ' '\n' | grep -qx incus-admin; then
+    echo "Note: $USER is in the incus-admin group, which is root-equivalent on this machine."
+    echo "The clanker recipes no longer need it. Remove it with: sudo gpasswd -d $USER incus-admin"
+  fi
+
+# Build a NixOS guest image from the flake and import it into Incus under the same name
+[group('clanker')]
+[linux]
+clanker-image config="clanker-boxes-base":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  build() { nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths "{{justfile_directory()}}#nixosConfigurations.{{config}}.config.system.build.$1"; }
+  meta="$(build metadata)"
+  image="$(build qemuImage)"
+  sudo incus image import --alias "{{config}}" --reuse "$meta"/tarball/*.tar.xz "$image"/*.qcow2
+  echo "✓ Imported image '{{config}}'. Launch with: just flowdora clanker-launch <name>"
+
+# Create and start a VM from an imported image
+[group('clanker')]
+[linux]
+clanker-launch name image="clanker-boxes-base":
+  sudo incus launch "{{image}}" "{{name}}" --vm --profile clanker-box
+  @echo "Shell as the agent user: sudo incus exec {{name}} -- su - clanker"

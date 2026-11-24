@@ -1,0 +1,22 @@
+# Incus network ACL for the clanker bridge, applied by `just flowdora clanker-host-setup`
+# (ACLs cannot be created from the preseed file, which only refers to this one by name).
+#
+# This repeats what firewalld/ enforces, inside Incus's own firewall table, so guests
+# stay confined even if firewalld is stopped or the bridge falls out of its zone.
+# Incus checks reject rules before allow rules, whatever their order here, and always
+# lets guests reach DHCP and DNS on the host; firewalld is what closes host DNS.
+description: Clanker boxes may reach the public IPv4 internet and nothing private
+config: {}
+egress: # traffic leaving a guest
+  - action: reject
+    destination: 10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,169.254.0.0/16,192.0.0.0/24,198.18.0.0/15,240.0.0.0/4
+    state: enabled
+  - action: allow
+    destination: 0.0.0.0/0
+    state: enabled
+ingress: # new connections towards a guest; replies to its own traffic are always allowed
+  # The host's DHCP server pings an address before handing it out.
+  - action: allow
+    source: 10.83.0.1/32
+    protocol: icmp4
+    state: enabled
