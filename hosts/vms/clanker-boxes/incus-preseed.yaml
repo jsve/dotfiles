@@ -5,14 +5,20 @@
 # Nothing secret belongs here; this repo is public.
 
 networks:
-  # Private NAT bridge for the VMs. What guests may reach is decided by the host
-  # firewall: see firewalld/ next to this file.
+  # Private NAT bridge for the VMs. What guests may reach is decided twice over:
+  # by the ACL in incus-acl-clanker.yaml and by the host firewall in firewalld/.
   - name: clankbr0
     type: bridge
     config:
       ipv4.address: 10.83.0.1/24
       ipv4.nat: "true"
       ipv6.address: none
+      # Guests use public resolvers directly, not the host's, so they cannot look
+      # up names on the LAN or VPN.
+      dns.nameservers: 1.1.1.1,9.9.9.9
+      security.acls: clanker
+      security.acls.default.egress.action: reject
+      security.acls.default.ingress.action: reject
 
 storage_pools:
   # Plain directory under /var/lib/incus. Simple, but snapshots are full copies;

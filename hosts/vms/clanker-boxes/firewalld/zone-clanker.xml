@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Installed to /etc/firewalld/zones/clanker.xml by `just flowdora clanker-host-setup`.
-     What a clanker box may reach on the host itself: only the DHCP and DNS server
-     that Incus runs on the bridge. Every other host port is rejected. -->
+     What a clanker box may reach on the host itself: only the DHCP server that Incus
+     runs on the bridge. Every other host port is rejected, including the host's DNS;
+     guests are given public resolvers instead (see incus-preseed.yaml). -->
 <zone>
   <short>Clanker boxes</short>
-  <description>Incus bridge for sandboxed coding-agent VMs. Guests get DHCP and DNS from the host and nothing else.</description>
+  <description>Incus bridge for sandboxed coding-agent VMs. Guests get DHCP from the host and nothing else.</description>
   <interface name="clankbr0"/>
   <service name="dhcp"/>
-  <service name="dns"/>
 </zone>
