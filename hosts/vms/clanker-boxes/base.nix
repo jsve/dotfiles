@@ -41,13 +41,23 @@
   environment.systemPackages = with pkgs; [
     git
     gh
-    nodejs_24 # also what the T3 Code server needs
+    nodejs_24
     codex
+    # T3 Code: provides the headless server (`t3 serve`) that the desktop app pairs
+    # with. It finds claude and codex on PATH and uses their own logins.
+    t3code
     # Same signed-manifest pin as home/modules/claude-code.
     (claude-code.override {
       manifest = lib.importJSON ../../../home/modules/claude-code/manifest.json;
     })
   ];
+
+  # T3 Code sends usage telemetry by default; this is its documented opt-out.
+  environment.variables.T3CODE_TELEMETRY_ENABLED = "false";
+
+  # The only way in from outside: the VM joins the tailnet as its own tagged device.
+  # It is not joined yet at first boot; that needs an auth key supplied at runtime.
+  services.tailscale.enable = true;
 
   # The Incus image module turns sshd on; the host uses `incus exec` instead.
   services.openssh.enable = lib.mkForce false;
