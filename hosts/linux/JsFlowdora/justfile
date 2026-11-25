@@ -200,20 +200,27 @@ clanker-launch name image="clanker-boxes-base":
   sudo incus launch "{{image}}" "{{name}}" --vm --profile clanker-box
   @echo "Shell as the agent user: sudo incus exec {{name}} -- su - clanker"
 
-# Rebuilds a running VM in place from this repo as published on GitHub: new packages
+# Brings a running VM in line with this checkout without recreating it: new packages
 # appear and changed services restart, with no reboot and nothing on its disk lost.
-# The VM fetches and builds the configuration itself (the repo is public, so it needs
-# no credentials), so the change has to be pushed first. `ref` is a branch or tag.
-[doc('Update a running VM in place to the configuration on a pushed branch (default main)')]
+# The host builds the system, exactly as it does for images, and hands the VM only
+# the store paths it lacks through Incus (no SSH, no network), then activates it.
+[doc('Build the configuration here and apply it to a running VM in place')]
 [group('clanker')]
 [linux]
-clanker-update name ref="main" config="clanker-boxes-base":
+clanker-update name config="clanker-boxes-base":
   #!/usr/bin/env bash
   set -euo pipefail
-  origin="$(git -C "{{justfile_directory()}}" remote get-url origin)"
-  if [[ "$origin" != https://* ]]; then
-    echo "Error: origin is '$origin'; the VM can only fetch the repo over https." >&2
-    exit 1
+  # Absolute paths inside the guest: `incus exec` does not give it NixOS's PATH.
+  guest_bin=/run/current-system/sw/bin
+  top="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths \
+    "{{justfile_directory()}}#nixosConfigurations.{{config}}.config.system.build.toplevel")"
+  missing="$(nix-store --query --requisites "$top" \
+    | sudo incus exec "{{name}}" -- /bin/sh -c 'while read -r p; do [ -e "$p" ] || echo "$p"; done')"
+  if [ -n "$missing" ]; then
+    echo "Copying $(echo "$missing" | wc -l) store paths into {{name}}..."
+    # shellcheck disable=SC2086  # one argument per path is intended
+    nix-store --export $missing | sudo incus exec "{{name}}" -- "$guest_bin/nix-store" --import > /dev/null
   fi
-  sudo incus exec "{{name}}" -- nixos-rebuild switch --refresh \
-    --flake "git+$origin?ref={{ref}}#{{config}}"
+  sudo incus exec "{{name}}" -- "$guest_bin/nix-env" --profile /nix/var/nix/profiles/system --set "$top"
+  sudo incus exec "{{name}}" -- "$top/bin/switch-to-configuration" switch
+  echo "✓ {{name}} now runs $top"
