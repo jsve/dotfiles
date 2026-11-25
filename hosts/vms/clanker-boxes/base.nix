@@ -55,14 +55,18 @@
     ++ (with pkgs; [
       git
       codex
-      # T3 Code: provides the headless server (`t3 serve`) that the desktop app pairs
-      # with. It finds claude and codex on PATH and uses their own logins.
-      t3code
+      # T3 Code's headless server (`t3 serve`), which the desktop app pairs with. It
+      # finds claude and codex on PATH and uses their own logins. Pinned in pkgs/t3-server.
+      (callPackage ../../../pkgs/t3-server { })
       # Same signed-manifest pin as home/modules/claude-code.
       (claude-code.override {
         manifest = lib.importJSON ../../../home/modules/claude-code/manifest.json;
       })
     ]);
+
+  # Lets ordinary prebuilt Linux binaries run on NixOS. The T3 server needs it, and
+  # so do the prebuilt tools that agents install through npm, pip and the like.
+  programs.nix-ld.enable = true;
 
   # T3 Code sends usage telemetry by default; this is its documented opt-out.
   environment.variables.T3CODE_TELEMETRY_ENABLED = "false";
