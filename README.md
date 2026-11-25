@@ -41,6 +41,8 @@ This repository manages system and user configurations across macOS (via nix-dar
 ├── justfile                     # Task runner with build, switch, and utility commands
 ├── lib/
 │   └── helpers.nix              # mkDarwin and mkLinux functions for system configs
+├── pkgs/
+│   └── t3-server/               # T3 Code headless server, pinned to an upstream release
 ├── hosts/
 │   ├── common/
 │   │   ├── system-packages-list.nix  # Shared package list (system-level on darwin/nixos, user-level on fedora)
@@ -49,10 +51,13 @@ This repository manages system and user configurations across macOS (via nix-dar
 │   │   └── darwin-dock.nix           # Default dock configuration for darwin
 │   ├── darwin/
 │   │   └── <hostname>/               # Host-specific darwin overrides
-│   └── linux/
-│       └── <hostname>/               # Host-specific linux overrides
+│   ├── linux/
+│   │   └── <hostname>/               # Host-specific linux overrides (JsFlowdora also has its own justfile)
+│   └── vms/
+│       └── clanker-boxes/            # NixOS guests for sandboxed coding agents, plus their Incus and firewall setup
 └── home/
-    ├── common.nix               # Shared home-manager config (user packages, programs)
+    ├── core.nix                 # Shell setup and CLI tools for every machine, including the clanker-box VMs
+    ├── common.nix               # Shared home-manager config for my own machines (imports core.nix)
     ├── darwin-common.nix        # Darwin-specific home-manager config
     ├── linux-common.nix         # Linux-specific home-manager config (imports system-packages-list)
     └── modules/
@@ -75,6 +80,13 @@ This repository manages system and user configurations across macOS (via nix-dar
 - Requires explicit PATH setup via `systemd.user.sessionVariables`
 - Everything managed at user-level through home-manager
 
+**Clanker boxes (sandboxed coding-agent VMs on JsFlowdora):**
+- NixOS guests built from `hosts/vms/clanker-boxes/base.nix` and run as Incus VMs
+- A guest can reach the public internet and nothing on the host, LAN or other guests; this is enforced twice, by an Incus network ACL and by firewalld
+- Managed with `just flowdora clanker-host-setup`, `clanker-image`, `clanker-launch <name>` and `clanker-update <name>`
+- Guests import `home/core.nix`, so anything added there lands in every agent VM
+- Secrets never go in this repo or anything the flake reads; they are handed to a running VM from the host
+
 **Shared Configuration:**
 - `system-packages-list.nix` defines packages once, used differently per platform
 - `home/common.nix` contains cross-platform user configuration
@@ -86,6 +98,9 @@ This repository manages system and user configurations across macOS (via nix-dar
 just build            # Build configuration without switching
 just switch           # Build and activate configuration
 just update           # Update flake inputs
+just update-claude    # Update only Claude Code (Linux) to the newest signed release
+just update-t3        # Update the pinned T3 Code server used by the clanker boxes
+just --list flowdora  # Recipes that only apply to the JsFlowdora machine
 just gc               # Run garbage collection
 ```
 
