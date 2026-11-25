@@ -38,19 +38,22 @@
     uid = 1000;
   };
 
-  environment.systemPackages = with pkgs; [
-    git
-    gh
-    nodejs_24
-    codex
-    # T3 Code: provides the headless server (`t3 serve`) that the desktop app pairs
-    # with. It finds claude and codex on PATH and uses their own logins.
-    t3code
-    # Same signed-manifest pin as home/modules/claude-code.
-    (claude-code.override {
-      manifest = lib.importJSON ../../../home/modules/claude-code/manifest.json;
-    })
-  ];
+  # The same core command-line tools as the other machines, plus what the agents need.
+  environment.systemPackages =
+    import ../../common/system-packages-list.nix { inherit pkgs; }
+    ++ (with pkgs; [
+      git
+      gh
+      nodejs_26
+      codex
+      # T3 Code: provides the headless server (`t3 serve`) that the desktop app pairs
+      # with. It finds claude and codex on PATH and uses their own logins.
+      t3code
+      # Same signed-manifest pin as home/modules/claude-code.
+      (claude-code.override {
+        manifest = lib.importJSON ../../../home/modules/claude-code/manifest.json;
+      })
+    ]);
 
   # T3 Code sends usage telemetry by default; this is its documented opt-out.
   environment.variables.T3CODE_TELEMETRY_ENABLED = "false";

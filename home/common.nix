@@ -24,7 +24,7 @@
     opencode
 
     # ch:
-    nodejs_22
+    nodejs_26
     python313
     # yarn # installs it's own version of node. don't use it for now.
 
