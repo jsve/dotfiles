@@ -36,6 +36,17 @@
   users.users.clanker = {
     isNormalUser = true;
     uid = 1000;
+    shell = pkgs.zsh;
+  };
+  programs.zsh.enable = true; # required for zsh to be a login shell
+
+  # The clanker user gets the same shell setup and command-line tools as the other
+  # machines (home/core.nix), so a terminal in a VM behaves like one anywhere else.
+  home-manager.useGlobalPkgs = true;
+  home-manager.useUserPackages = true;
+  home-manager.users.clanker = {
+    imports = [ ../../../home/core.nix ];
+    home.stateVersion = "26.11"; # release first used for this user; don't bump.
   };
 
   # The same core command-line tools as the other machines, plus what the agents need.
@@ -43,8 +54,6 @@
     import ../../common/system-packages-list.nix { inherit pkgs; }
     ++ (with pkgs; [
       git
-      gh
-      nodejs_26
       codex
       # T3 Code: provides the headless server (`t3 serve`) that the desktop app pairs
       # with. It finds claude and codex on PATH and uses their own logins.

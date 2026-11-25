@@ -77,7 +77,10 @@
       nixosConfigurations = {
         clanker-boxes-base = nixpkgs.lib.nixosSystem {
           system = "x86_64-linux";
-          modules = [ ./hosts/vms/clanker-boxes/base.nix ];
+          modules = [
+            home-manager.nixosModules.home-manager
+            ./hosts/vms/clanker-boxes/base.nix
+          ];
         };
       };
     };

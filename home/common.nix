@@ -6,31 +6,17 @@
   programs.home-manager.enable = true;
 
   imports = [
+    ./core.nix # shell setup and command-line tools, shared with the clanker-box VMs
     ./modules/vscode.nix
-    ./modules/zsh.nix
-    ./modules/direnv.nix
   ];
 
   systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
     PATH = "$HOME/.nix-profile/bin:$PATH";
   };
 
-  home.packages = with pkgs; [
-    # Haxx
-    # bruno # installs it's own version of node. don't use it for now.
-    gh
-    neovim
-    openssl
-    opencode
-
-    # ch:
-    nodejs_26
-    python313
-    # yarn # installs it's own version of node. don't use it for now.
-
-    # managed by homebrew
-    # ghostty
-    # steam
-  ];
+  # Command-line packages live in ./core.nix. Desktop apps:
+  # managed by homebrew
+  # ghostty
+  # steam
 
 }
