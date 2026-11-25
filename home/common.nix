@@ -14,9 +14,14 @@
     PATH = "$HOME/.nix-profile/bin:$PATH";
   };
 
-  # Command-line packages live in ./core.nix. Desktop apps:
-  # managed by homebrew
-  # ghostty
-  # steam
+  # Packages for my own machines only. Tools the clanker-box VMs should also have
+  # go in ./core.nix instead.
+  home.packages = with pkgs; [
+    opencode
+
+    # managed by homebrew
+    # ghostty
+    # steam
+  ];
 
 }

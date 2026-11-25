@@ -15,7 +15,6 @@
     gh
     neovim
     openssl
-    opencode
 
     # ch:
     nodejs_26
