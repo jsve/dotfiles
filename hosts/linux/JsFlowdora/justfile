@@ -284,11 +284,11 @@ clanker-update name="": clanker-publish
   echo "✓ Updated:" $names
 
 # Optional convenience for joining several boxes: keeps a Tailscale auth key in a
-# root-only file outside the repo, so clanker-join does not ask for it each time.
+# root-only file outside the repo, so clanker-tailnet-join does not ask for it each time.
 # Only do this with "Manually approve new devices" on in the tailnet and a key that is
 # not pre-approved: the key alone then cannot add a working device. Revoke the key in
 # the Tailscale console when the boxes have joined. Entering nothing removes the file.
-[doc('Store (or, with empty input, remove) a Tailscale auth key for clanker-join to use (needs sudo)')]
+[doc('Store (or, with empty input, remove) a Tailscale auth key for clanker-tailnet-join to use (needs sudo)')]
 [group('clanker')]
 [linux]
 clanker-authkey:
@@ -315,7 +315,7 @@ clanker-authkey:
 [doc('Join a running box to the tailnet under its own name, with the stored auth key or one you paste')]
 [group('clanker')]
 [linux]
-clanker-join name:
+clanker-tailnet-join name:
   #!/usr/bin/env bash
   set -euo pipefail
   guest_bin=/run/current-system/sw/bin
@@ -340,12 +340,12 @@ clanker-join name:
   sudo incus exec "{{name}}" -- "$guest_bin/systemctl" restart t3-server
   sudo incus exec "{{name}}" -- "$guest_bin/tailscale" status || true
   echo "✓ {{name}} joined. If the tailnet requires approval, approve '{{name}}' on the Machines page now,"
-  echo "  then pair the T3 app with it: just flowdora clanker-pair {{name}}"
+  echo "  then pair the T3 app with it: just flowdora clanker-t3-pair {{name}}"
 
 # The link is valid for a few minutes and for one device. Open it on the machine
 # running the T3 app; the app remembers the box afterwards.
 [doc('Print a one-time link that pairs the T3 app with the server in a box')]
 [group('clanker')]
 [linux]
-clanker-pair name:
+clanker-t3-pair name:
   sudo incus exec "{{name}}" -- su - clanker -c 't3 pair --tailscale'

@@ -84,7 +84,7 @@ This repository manages system and user configurations across macOS (via nix-dar
 - NixOS guests built from `hosts/vms/clanker-boxes/base.nix` and run as Incus VMs
 - A guest can reach the public internet and nothing on the host, LAN or other guests; this is enforced twice, by an Incus network ACL and by firewalld
 - Managed with `just flowdora clanker-host-setup`, `clanker-image`, `clanker-launch <name>`, `clanker-publish` and `clanker-update [name]`
-- `clanker-join <name>` puts a box on the tailnet as its own tagged device and `clanker-pair <name>` prints a link that pairs the T3 app with it
+- `clanker-tailnet-join <name>` puts a box on the tailnet as its own tagged device and `clanker-t3-pair <name>` prints a link that pairs the T3 app with it
 - JsFlowdora builds one starter image. After that each box rebuilds itself, at boot and on `clanker-update`, from a committed copy of this repo that `clanker-publish` places in a folder mounted read-only into the boxes; boxes never pull from GitHub
 - A box applies `nixosConfigurations.<its Incus name>` from `flake.nix`, or `clanker-boxes-base` if it has no entry of its own
 - Guests import `home/core.nix`, so anything added there lands in every agent VM
