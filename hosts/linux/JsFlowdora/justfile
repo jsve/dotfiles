@@ -270,9 +270,11 @@ clanker-update name="": clanker-publish
   fi
   failed=""
   for n in $names; do
-    echo "== $n: rebuilding itself (this can take a few minutes)"
+    echo "== $n: applying the published configuration (a few minutes if something changed)"
+    # The box's own clock, so that only this run's log lines are shown afterwards.
+    since="$(sudo incus exec "$n" -- "$guest_bin/date" +%s)"
     sudo incus exec "$n" -- "$guest_bin/systemctl" start clanker-apply || failed="$failed $n"
-    sudo incus exec "$n" -- "$guest_bin/journalctl" --unit clanker-apply --lines 8 --no-pager --output cat || true
+    sudo incus exec "$n" -- "$guest_bin/journalctl" --unit clanker-apply --since "@$since" --lines 8 --no-pager --output cat || true
   done
   if [ -n "$failed" ]; then
     echo "Error: update failed on:$failed. Those boxes still run their previous system." >&2
