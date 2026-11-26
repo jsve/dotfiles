@@ -1,16 +1,23 @@
 # clanker-boxes-base: the shared NixOS guest for sandboxed coding-agent VMs.
 # Built into an Incus VM image by `just flowdora clanker-image` and run on JsFlowdora.
-# Per-VM (robot-named) configs will import this file and add project packages.
+# Per-VM (robot-named) configs in flake.nix build on this file and add their own packages.
+# Every box rebuilds itself from the copy of this repo that the host publishes into it
+# (see clanker-apply below), so the image only has to be good enough to boot and do that.
 #
 # This repo is public and the Nix store is readable by every user of a machine,
 # so nothing secret may be referenced here. Tokens are pushed into a running VM
 # from the host (`incus file push`), never built into the image.
 {
+  config,
   pkgs,
   lib,
   modulesPath,
   ...
 }:
+let
+  # Where the Incus profile mounts the host's published folder, read-only.
+  hostShare = "/mnt/host";
+in
 {
   imports = [
     # Disk image, boot loader, DHCP networking and the Incus guest agent.
@@ -74,6 +81,75 @@
   # The only way in from outside: the VM joins the tailnet as its own tagged device.
   # It is not joined yet at first boot; that needs an auth key supplied at runtime.
   services.tailscale.enable = true;
+
+  # Keeps the box in line with the repo. JsFlowdora publishes a committed copy of this
+  # repo into a folder that Incus mounts read-only at ${hostShare}
+  # (`just flowdora clanker-publish`). At boot, and whenever the host runs
+  # `just flowdora clanker-update`, the box asks Incus for its own instance name and
+  # switches to nixosConfigurations.<that name>, or to clanker-boxes-base if the flake
+  # has no entry for it. A failed build leaves the running system untouched.
+  systemd.services.clanker-apply = {
+    description = "Apply this box's NixOS configuration from the host's published copy";
+    wantedBy = [ "multi-user.target" ];
+    wants = [ "network-online.target" ];
+    after = [
+      "network-online.target"
+      "incus-agent.service" # mounts the share and provides /dev/incus/sock
+    ];
+    # The switch this unit performs must not stop or restart the unit itself.
+    restartIfChanged = false;
+    unitConfig.X-StopOnRemoval = false;
+    serviceConfig.Type = "oneshot";
+    environment = config.nix.envVars // {
+      HOME = "/root";
+    };
+    path = [
+      pkgs.coreutils
+      pkgs.curl
+      pkgs.gnused
+      pkgs.gnutar
+      pkgs.xz.bin
+      pkgs.gzip
+      pkgs.gitMinimal
+      config.nix.package.out
+      config.system.build.nixos-rebuild
+    ];
+    script = ''
+      share=${hostShare}
+      # The Incus agent mounts the share shortly after it starts.
+      for _ in $(seq 60); do
+        [ -e "$share/revision" ] && break
+        sleep 1
+      done
+      if [ ! -e "$share/revision" ]; then
+        echo "Nothing published at $share; leaving the system as it is."
+        exit 0
+      fi
+
+      name="$(curl -fsS --unix-socket /dev/incus/sock http://incus/1.0/meta-data \
+        | sed -n 's/^local-hostname: //p')"
+      if [[ ! "$name" =~ ^[A-Za-z0-9-]+$ ]]; then
+        echo "Could not read this box's instance name from Incus." >&2
+        exit 1
+      fi
+
+      # Skip the evaluation, which takes a minute, when this revision is already applied.
+      revision="$(cat "$share/revision")"
+      applied=/var/lib/clanker-apply/applied
+      if [ "$(cat "$applied" 2>/dev/null)" = "$name $revision" ]; then
+        echo "$name already runs revision $revision."
+        exit 0
+      fi
+
+      flake="path:$share/dotfiles"
+      target="$(nix eval --raw "$flake#nixosConfigurations" \
+        --apply "c: if c ? \"$name\" then \"$name\" else \"clanker-boxes-base\"")"
+      echo "Applying $target at revision $revision to $name..."
+      nixos-rebuild switch --flake "$flake#$target"
+      mkdir -p "$(dirname "$applied")"
+      echo "$name $revision" > "$applied"
+    '';
+  };
 
   # The Incus image module turns sshd on; the host uses `incus exec` instead.
   services.openssh.enable = lib.mkForce false;

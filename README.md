@@ -83,8 +83,9 @@ This repository manages system and user configurations across macOS (via nix-dar
 **Clanker boxes (sandboxed coding-agent VMs on JsFlowdora):**
 - NixOS guests built from `hosts/vms/clanker-boxes/base.nix` and run as Incus VMs
 - A guest can reach the public internet and nothing on the host, LAN or other guests; this is enforced twice, by an Incus network ACL and by firewalld
-- Managed with `just flowdora clanker-host-setup`, `clanker-image`, `clanker-launch <name>` and `clanker-update <name>`
-- JsFlowdora builds everything: images for new guests, and updated systems that `clanker-update` copies into running ones
+- Managed with `just flowdora clanker-host-setup`, `clanker-image`, `clanker-launch <name>`, `clanker-publish` and `clanker-update [name]`
+- JsFlowdora builds one starter image. After that each box rebuilds itself, at boot and on `clanker-update`, from a committed copy of this repo that `clanker-publish` places in a folder mounted read-only into the boxes; boxes never pull from GitHub
+- A box applies `nixosConfigurations.<its Incus name>` from `flake.nix`, or `clanker-boxes-base` if it has no entry of its own
 - Guests import `home/core.nix`, so anything added there lands in every agent VM
 - Secrets never go in this repo or anything the flake reads; they are handed to a running VM from the host
 

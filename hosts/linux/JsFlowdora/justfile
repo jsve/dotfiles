@@ -137,11 +137,13 @@ verify_grub_llm:
 [doc('Install Incus and apply the clanker-box network, storage and profile setup (needs sudo)')]
 [group('clanker')]
 [linux]
-clanker-host-setup:
+clanker-host-setup: && clanker-publish
   #!/usr/bin/env bash
   set -euo pipefail
   sudo dnf install -y incus
   sudo systemctl enable --now incus.socket
+  # The folder shared read-only into every box; the profile in the preseed refers to it.
+  sudo mkdir -p /var/lib/clanker-boxes/share
   boxes="{{justfile_directory()}}/hosts/vms/clanker-boxes"
   # The ACL has to exist before the preseed attaches it to the bridge.
   sudo incus network acl show clanker >/dev/null 2>&1 || sudo incus network acl create clanker
@@ -200,27 +202,60 @@ clanker-launch name image="clanker-boxes-base":
   sudo incus launch "{{image}}" "{{name}}" --vm --profile clanker-box
   @echo "Shell as the agent user: sudo incus exec {{name}} -- su - clanker"
 
-# Brings a running VM in line with this checkout without recreating it: new packages
-# appear and changed services restart, with no reboot and nothing on its disk lost.
-# The host builds the system, exactly as it does for images, and hands the VM only
-# the store paths it lacks through Incus (no SSH, no network), then activates it.
-[doc('Build the configuration here and apply it to a running VM in place')]
+# Boxes never read this checkout or GitHub. They rebuild themselves from a root-owned
+# copy under /var/lib/clanker-boxes/share, which Incus mounts into them read-only, and
+# that copy only changes when this recipe runs. It contains exactly what is committed
+# on the branch checked out here: no uncommitted edits, no untracked files, no .git.
+[doc('Copy the committed state of this checkout to the folder the boxes rebuild from (needs sudo)')]
 [group('clanker')]
 [linux]
-clanker-update name config="clanker-boxes-base":
+clanker-publish:
   #!/usr/bin/env bash
   set -euo pipefail
+  repo="{{justfile_directory()}}"
+  share=/var/lib/clanker-boxes/share
+  revision="$(git -C "$repo" rev-parse HEAD)"
+  sudo mkdir -p "$share"
+  sudo rm -rf "$share/dotfiles.new" "$share/dotfiles.old"
+  sudo mkdir "$share/dotfiles.new"
+  git -C "$repo" archive HEAD | sudo tar -x -C "$share/dotfiles.new"
+  if sudo test -e "$share/dotfiles"; then sudo mv "$share/dotfiles" "$share/dotfiles.old"; fi
+  sudo mv "$share/dotfiles.new" "$share/dotfiles"
+  sudo rm -rf "$share/dotfiles.old"
+  # Written last: boxes compare it with the revision they last applied.
+  echo "$revision" | sudo tee "$share/revision" > /dev/null
+  echo "✓ Published $(git -C "$repo" rev-parse --abbrev-ref HEAD) at ${revision:0:7} for the boxes."
+  if [ -n "$(git -C "$repo" status --porcelain)" ]; then
+    echo "Note: this checkout has uncommitted changes; they were not published."
+  fi
+
+# Each box also does this by itself when it starts, so stopped boxes need nothing:
+# they catch up with whatever is published the next time they boot.
+[doc('Publish this checkout, then have one running box (or all of them) rebuild itself from it now')]
+[group('clanker')]
+[linux]
+clanker-update name="": clanker-publish
+  #!/usr/bin/env bash
+  set -uo pipefail
   # Absolute paths inside the guest: `incus exec` does not give it NixOS's PATH.
   guest_bin=/run/current-system/sw/bin
-  top="$(nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths \
-    "{{justfile_directory()}}#nixosConfigurations.{{config}}.config.system.build.toplevel")"
-  missing="$(nix-store --query --requisites "$top" \
-    | sudo incus exec "{{name}}" -- /bin/sh -c 'while read -r p; do [ -e "$p" ] || echo "$p"; done')"
-  if [ -n "$missing" ]; then
-    echo "Copying $(echo "$missing" | wc -l) store paths into {{name}}..."
-    # shellcheck disable=SC2086  # one argument per path is intended
-    nix-store --export $missing | sudo incus exec "{{name}}" -- "$guest_bin/nix-store" --import > /dev/null
+  names="{{name}}"
+  if [ -z "$names" ]; then
+    names="$(sudo incus list --format csv --columns n type=virtual-machine status=running)"
   fi
-  sudo incus exec "{{name}}" -- "$guest_bin/nix-env" --profile /nix/var/nix/profiles/system --set "$top"
-  sudo incus exec "{{name}}" -- "$top/bin/switch-to-configuration" switch
-  echo "✓ {{name}} now runs $top"
+  if [ -z "$names" ]; then
+    echo "No running boxes; they will apply the published configuration when they start."
+    exit 0
+  fi
+  failed=""
+  for n in $names; do
+    echo "== $n: rebuilding itself (this can take a few minutes)"
+    sudo incus exec "$n" -- "$guest_bin/systemctl" start clanker-apply || failed="$failed $n"
+    sudo incus exec "$n" -- "$guest_bin/journalctl" --unit clanker-apply --lines 8 --no-pager --output cat || true
+  done
+  if [ -n "$failed" ]; then
+    echo "Error: update failed on:$failed. Those boxes still run their previous system." >&2
+    echo "Full log: sudo incus exec <name> -- $guest_bin/journalctl --unit clanker-apply --no-pager" >&2
+    exit 1
+  fi
+  echo "✓ Updated:" $names
