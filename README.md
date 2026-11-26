@@ -88,7 +88,7 @@ This repository manages system and user configurations across macOS (via nix-dar
 - JsFlowdora builds one starter image. After that each box rebuilds itself, at boot and on `clanker-update`, from a committed copy of this repo that `clanker-publish` places in a folder mounted read-only into the boxes; boxes never pull from GitHub
 - A box applies `nixosConfigurations.<its Incus name>` from `flake.nix`, or `clanker-boxes-base` if it has no entry of its own
 - Guests import `home/core.nix`, so anything added there lands in every agent VM
-- Secrets never go in this repo, in anything the flake reads, or in files on the host; they are typed at a prompt and streamed into a running VM
+- Secrets never go in this repo or in anything the flake reads; they are typed at a prompt and streamed into a running VM. The one exception is optional: `clanker-authkey` keeps a Tailscale auth key in a root-only file on the host, meant for a tailnet with device approval on
 
 **Shared Configuration:**
 - `system-packages-list.nix` defines packages once, used differently per platform

@@ -283,21 +283,50 @@ clanker-update name="": clanker-publish
   fi
   echo "✓ Updated:" $names
 
+# Optional convenience for joining several boxes: keeps a Tailscale auth key in a
+# root-only file outside the repo, so clanker-join does not ask for it each time.
+# Only do this with "Manually approve new devices" on in the tailnet and a key that is
+# not pre-approved: the key alone then cannot add a working device. Revoke the key in
+# the Tailscale console when the boxes have joined. Entering nothing removes the file.
+[doc('Store (or, with empty input, remove) a Tailscale auth key for clanker-join to use (needs sudo)')]
+[group('clanker')]
+[linux]
+clanker-authkey:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  file=/etc/clanker-boxes/tailscale-authkey
+  sudo -v
+  read -rsp "Tailscale auth key for tag:clanker (input hidden; empty removes the stored key): " key
+  echo
+  if [ -z "$key" ]; then
+    sudo rm -f "$file"
+    echo "✓ No auth key is stored."
+    exit 0
+  fi
+  sudo /usr/bin/install -d -m 0700 /etc/clanker-boxes
+  printf '%s\n' "$key" | sudo sh -c "umask 077; cat > '$file'"
+  echo "✓ Stored in $file (root only). Remove it with this recipe and empty input."
+
 # The box joins as its own device under the tag the auth key carries (tag:clanker), so
 # what it may reach and who may reach it is decided by the tailnet policy, not by a
-# user's login. The key is pasted at a hidden prompt and streamed straight to the
-# tailscale command in the box: it is never written to a file here or there, and
-# never appears on a command line.
-[doc('Join a running box to the tailnet under its own name; asks for a tag:clanker auth key')]
+# user's login. The key comes from the file kept by clanker-authkey, or else from a
+# hidden prompt; either way it is streamed straight to the tailscale command in the
+# box, never written to a file there and never put on a command line.
+[doc('Join a running box to the tailnet under its own name, with the stored auth key or one you paste')]
 [group('clanker')]
 [linux]
 clanker-join name:
   #!/usr/bin/env bash
   set -euo pipefail
   guest_bin=/run/current-system/sw/bin
+  file=/etc/clanker-boxes/tailscale-authkey
   sudo -v
-  read -rsp "Tailscale auth key for tag:clanker (input hidden): " key
-  echo
+  if sudo test -s "$file"; then
+    key="$(sudo cat "$file")"
+  else
+    read -rsp "Tailscale auth key for tag:clanker (input hidden): " key
+    echo
+  fi
   if [ -z "$key" ]; then
     echo "Error: empty key; nothing done." >&2
     exit 1
@@ -309,8 +338,9 @@ clanker-join name:
   unset key
   # T3 can only publish itself on the tailnet once the box has joined.
   sudo incus exec "{{name}}" -- "$guest_bin/systemctl" restart t3-server
-  sudo incus exec "{{name}}" -- "$guest_bin/tailscale" status
-  echo "✓ {{name}} joined. Pair the T3 app with it: just flowdora clanker-pair {{name}}"
+  sudo incus exec "{{name}}" -- "$guest_bin/tailscale" status || true
+  echo "✓ {{name}} joined. If the tailnet requires approval, approve '{{name}}' on the Machines page now,"
+  echo "  then pair the T3 app with it: just flowdora clanker-pair {{name}}"
 
 # The link is valid for a few minutes and for one device. Open it on the machine
 # running the T3 app; the app remembers the box afterwards.
