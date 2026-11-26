@@ -119,6 +119,42 @@ update-claude channel="latest":
   echo "✓ Claude Code manifest set to $VERSION ({{channel}}), signature verified. Run 'just switch' on the Linux machines to install."
 
 
+# Reads the checksums from the release's own SHA256SUMS file on GitHub and rewrites
+# pkgs/t3-server/release.json. The checksums are only as trustworthy as that download:
+# unlike Claude Code's manifest, T3 releases are not signed. Afterwards rebuild the
+# clanker-box image, or update running boxes, on JsFlowdora.
+[doc('Update the pinned T3 Code server to the latest release, or to a given version like 0.1.11')]
+[group('nix')]
+update-t3 version="latest":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  REPO="pingdotgg/t3code"
+  FILE="{{justfile_directory()}}/pkgs/t3-server/release.json"
+  VERSION="{{version}}"
+  if [ "$VERSION" = "latest" ]; then
+    VERSION="$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | jq -r .tag_name)"
+  fi
+  VERSION="${VERSION#v}"
+  if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "Error: '$VERSION' is not a version number."
+    exit 1
+  fi
+  SUMS="$(curl -fsSL "https://github.com/$REPO/releases/download/v$VERSION/SHA256SUMS")"
+  sum() { echo "$SUMS" | awk -v f="t3-$VERSION-linux-$1.tar.gz" '$2 == f { print $1 }'; }
+  X64="$(sum x64)"
+  ARM64="$(sum arm64)"
+  for s in "$X64" "$ARM64"; do
+    if [[ ! "$s" =~ ^[0-9a-f]{64}$ ]]; then
+      echo "Error: SHA256SUMS for v$VERSION lacks a Linux server tarball; release.json left unchanged."
+      exit 1
+    fi
+  done
+  jq -n --arg v "$VERSION" --arg x "$X64" --arg a "$ARM64" \
+    '{version: $v, sha256: {"x86_64-linux": $x, "aarch64-linux": $a}}' > "$FILE.tmp"
+  mv "$FILE.tmp" "$FILE"
+  echo "✓ T3 Code server pinned to $VERSION in pkgs/t3-server/release.json."
+
+
 # Garbage collect old OS generations and remove stale packages from the nix store
 gc:
   nix-collect-garbage --delete-older-than 7d

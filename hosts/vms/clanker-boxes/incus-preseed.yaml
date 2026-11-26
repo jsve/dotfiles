@@ -40,6 +40,14 @@ profiles:
         path: /
         pool: clanker
         size: 50GiB
+      # The committed copy of this repo that `just flowdora clanker-publish` writes on
+      # the host; each box rebuilds itself from it. Read-only is enforced on the host
+      # side, so a guest cannot change what it or the other boxes will apply.
+      host:
+        type: disk
+        source: /var/lib/clanker-boxes/share
+        path: /mnt/host
+        readonly: "true"
       eth0:
         type: nic
         network: clankbr0

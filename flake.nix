@@ -73,13 +73,28 @@
         };
       };
 
-      # NixOS guests for sandboxed coding-agent VMs on JsFlowdora (see `just flowdora clanker-image`).
-      nixosConfigurations = {
-        clanker-boxes-base = nixpkgs.lib.nixosSystem {
-          system = "x86_64-linux";
-          modules = [ ./hosts/vms/clanker-boxes/base.nix ];
+      # NixOS guests for sandboxed coding-agent VMs on JsFlowdora. A VM applies the entry
+      # named after its Incus instance and falls back to clanker-boxes-base, so giving a
+      # box its own setup means adding an entry here and launching a VM with that name.
+      nixosConfigurations =
+        let
+          mkClankerBox =
+            modules:
+            nixpkgs.lib.nixosSystem {
+              system = "x86_64-linux";
+              modules = [
+                home-manager.nixosModules.home-manager
+                ./hosts/vms/clanker-boxes/base.nix
+              ]
+              ++ modules;
+            };
+        in
+        {
+          # Also the image new VMs start from (see `just flowdora clanker-image`).
+          clanker-boxes-base = mkClankerBox [ ];
+          # Example of a box with extras:
+          # robot1 = mkClankerBox [ { networking.hostName = "robot1"; } ./hosts/vms/clanker-boxes/robot1.nix ];
         };
-      };
     };
 
 }

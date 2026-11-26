@@ -6,27 +6,18 @@
   programs.home-manager.enable = true;
 
   imports = [
+    ./core.nix # shell setup and command-line tools, shared with the clanker-box VMs
     ./modules/vscode.nix
-    ./modules/zsh.nix
-    ./modules/direnv.nix
   ];
 
   systemd.user.sessionVariables = lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
     PATH = "$HOME/.nix-profile/bin:$PATH";
   };
 
+  # Packages for my own machines only. Tools the clanker-box VMs should also have
+  # go in ./core.nix instead.
   home.packages = with pkgs; [
-    # Haxx
-    # bruno # installs it's own version of node. don't use it for now.
-    gh
-    neovim
-    openssl
     opencode
-
-    # ch:
-    nodejs_22
-    python313
-    # yarn # installs it's own version of node. don't use it for now.
 
     # managed by homebrew
     # ghostty

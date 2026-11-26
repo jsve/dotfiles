@@ -137,11 +137,13 @@ verify_grub_llm:
 [doc('Install Incus and apply the clanker-box network, storage and profile setup (needs sudo)')]
 [group('clanker')]
 [linux]
-clanker-host-setup:
+clanker-host-setup: && clanker-publish
   #!/usr/bin/env bash
   set -euo pipefail
   sudo dnf install -y incus
   sudo systemctl enable --now incus.socket
+  # The folder shared read-only into every box; the profile in the preseed refers to it.
+  sudo mkdir -p /var/lib/clanker-boxes/share
   boxes="{{justfile_directory()}}/hosts/vms/clanker-boxes"
   # The ACL has to exist before the preseed attaches it to the bridge.
   sudo incus network acl show clanker >/dev/null 2>&1 || sudo incus network acl create clanker
@@ -190,6 +192,15 @@ clanker-image config="clanker-boxes-base":
   build() { nix --extra-experimental-features 'nix-command flakes' build --no-link --print-out-paths "{{justfile_directory()}}#nixosConfigurations.{{config}}.config.system.build.$1"; }
   meta="$(build metadata)"
   image="$(build qemuImage)"
+  # Incus refuses to import an image it already has, so re-running with nothing changed
+  # only makes sure the name points at it. The fingerprint is the SHA-256 of both files.
+  fingerprint="$(cat "$meta"/tarball/*.tar.xz "$image"/*.qcow2 | sha256sum | cut -d' ' -f1)"
+  if sudo incus image info "$fingerprint" >/dev/null 2>&1; then
+    sudo incus image alias delete "{{config}}" 2>/dev/null || true
+    sudo incus image alias create "{{config}}" "$fingerprint"
+    echo "✓ Image '{{config}}' is unchanged and already imported."
+    exit 0
+  fi
   sudo incus image import --alias "{{config}}" --reuse "$meta"/tarball/*.tar.xz "$image"/*.qcow2
   echo "✓ Imported image '{{config}}'. Launch with: just flowdora clanker-launch <name>"
 
@@ -197,5 +208,77 @@ clanker-image config="clanker-boxes-base":
 [group('clanker')]
 [linux]
 clanker-launch name image="clanker-boxes-base":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  # A new box switches to the published copy within a minute of booting, whatever the
+  # image contains, so say so when that copy is not what is checked out here.
+  published="$(cat /var/lib/clanker-boxes/share/revision 2>/dev/null || true)"
+  head="$(git -C "{{justfile_directory()}}" rev-parse HEAD)"
+  if [ "$published" != "$head" ]; then
+    echo "Note: the published configuration (${published:0:7}) is not this checkout's commit (${head:0:7})."
+    echo "{{name}} will apply the published one. To publish this commit: just flowdora clanker-publish"
+  fi
   sudo incus launch "{{image}}" "{{name}}" --vm --profile clanker-box
-  @echo "Shell as the agent user: sudo incus exec {{name}} -- su - clanker"
+  echo "Shell as the agent user: sudo incus exec {{name}} -- su - clanker"
+
+# Boxes never read this checkout or GitHub. They rebuild themselves from a root-owned
+# copy under /var/lib/clanker-boxes/share, which Incus mounts into them read-only, and
+# that copy only changes when this recipe runs. It contains exactly what is committed
+# on the branch checked out here: no uncommitted edits, no untracked files, no .git.
+[doc('Copy the committed state of this checkout to the folder the boxes rebuild from (needs sudo)')]
+[group('clanker')]
+[linux]
+clanker-publish:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  repo="{{justfile_directory()}}"
+  share=/var/lib/clanker-boxes/share
+  revision="$(git -C "$repo" rev-parse HEAD)"
+  sudo mkdir -p "$share"
+  sudo rm -rf "$share/dotfiles.new" "$share/dotfiles.old"
+  sudo mkdir "$share/dotfiles.new"
+  git -C "$repo" archive HEAD | sudo tar -x -C "$share/dotfiles.new"
+  if sudo test -e "$share/dotfiles"; then sudo mv "$share/dotfiles" "$share/dotfiles.old"; fi
+  sudo mv "$share/dotfiles.new" "$share/dotfiles"
+  sudo rm -rf "$share/dotfiles.old"
+  # Written last: boxes compare it with the revision they last applied.
+  echo "$revision" | sudo tee "$share/revision" > /dev/null
+  echo "✓ Published $(git -C "$repo" rev-parse --abbrev-ref HEAD) at ${revision:0:7} for the boxes."
+  if [ -n "$(git -C "$repo" status --porcelain)" ]; then
+    echo "Note: this checkout has uncommitted changes; they were not published."
+  fi
+
+# Each box also does this by itself when it starts, so stopped boxes need nothing:
+# they catch up with whatever is published the next time they boot.
+[doc('Publish this checkout, then have one running box (or all of them) rebuild itself from it now')]
+[group('clanker')]
+[linux]
+clanker-update name="": clanker-publish
+  #!/usr/bin/env bash
+  set -uo pipefail
+  # Without this, Ctrl-C only ends the command in progress and the loop carries on.
+  trap 'echo; echo "Interrupted; the boxes keep whatever they were doing." >&2; exit 130' INT
+  # Absolute paths inside the guest: `incus exec` does not give it NixOS's PATH.
+  guest_bin=/run/current-system/sw/bin
+  names="{{name}}"
+  if [ -z "$names" ]; then
+    names="$(sudo incus list --format csv --columns n type=virtual-machine status=running)"
+  fi
+  if [ -z "$names" ]; then
+    echo "No running boxes; they will apply the published configuration when they start."
+    exit 0
+  fi
+  failed=""
+  for n in $names; do
+    echo "== $n: applying the published configuration (a few minutes if something changed)"
+    # The box's own clock, so that only this run's log lines are shown afterwards.
+    since="$(sudo incus exec "$n" -- "$guest_bin/date" +%s)"
+    sudo incus exec "$n" -- "$guest_bin/systemctl" start clanker-apply || failed="$failed $n"
+    sudo incus exec "$n" -- "$guest_bin/journalctl" --unit clanker-apply --since "@$since" --lines 8 --no-pager --output cat || true
+  done
+  if [ -n "$failed" ]; then
+    echo "Error: update failed on:$failed. Those boxes still run their previous system." >&2
+    echo "Full log: sudo incus exec <name> -- $guest_bin/journalctl --unit clanker-apply --no-pager" >&2
+    exit 1
+  fi
+  echo "✓ Updated:" $names
