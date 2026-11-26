@@ -283,48 +283,39 @@ clanker-update name="": clanker-publish
   fi
   echo "✓ Updated:" $names
 
-# Secrets for the boxes live in /etc/clanker-boxes/secrets on this machine: outside the
-# repo (which is public) and readable only by root, so not by programs running as you.
-# The value is typed or pasted at a hidden prompt and never appears on a command line.
-[doc('Store a secret for the boxes on this machine, e.g. `clanker-secret tailscale-authkey` (needs sudo)')]
-[group('clanker')]
-[linux]
-clanker-secret secret:
-  #!/usr/bin/env bash
-  set -euo pipefail
-  if [[ ! "{{secret}}" =~ ^[a-z0-9-]+$ ]]; then
-    echo "Error: secret names use lowercase letters, digits and dashes only." >&2
-    exit 1
-  fi
-  dir=/etc/clanker-boxes/secrets
-  read -rsp "Value for {{secret}} (input hidden): " value
-  echo
-  if [ -z "$value" ]; then
-    echo "Error: empty value; nothing stored." >&2
-    exit 1
-  fi
-  sudo /usr/bin/install -d -m 0700 "$dir"
-  printf '%s\n' "$value" | sudo sh -c "umask 077; cat > '$dir/{{secret}}'"
-  echo "✓ Stored $dir/{{secret}}"
-
 # The box joins as its own device under the tag the auth key carries (tag:clanker), so
 # what it may reach and who may reach it is decided by the tailnet policy, not by a
-# user's login. The key is held in the box's memory-only /run just long enough to join.
-[doc('Join a running box to the tailnet under its own name, using the stored tailscale-authkey')]
+# user's login. The key is pasted at a hidden prompt and streamed straight to the
+# tailscale command in the box: it is never written to a file here or there, and
+# never appears on a command line.
+[doc('Join a running box to the tailnet under its own name; asks for a tag:clanker auth key')]
 [group('clanker')]
 [linux]
 clanker-join name:
   #!/usr/bin/env bash
   set -euo pipefail
-  key=/etc/clanker-boxes/secrets/tailscale-authkey
   guest_bin=/run/current-system/sw/bin
-  if ! sudo test -s "$key"; then
-    echo "Error: no auth key stored. Run: just flowdora clanker-secret tailscale-authkey" >&2
+  sudo -v
+  read -rsp "Tailscale auth key for tag:clanker (input hidden): " key
+  echo
+  if [ -z "$key" ]; then
+    echo "Error: empty key; nothing done." >&2
     exit 1
   fi
-  trap 'sudo incus exec "{{name}}" -- "$guest_bin/rm" -f /run/tailscale-authkey' EXIT
-  sudo incus file push --quiet --uid 0 --gid 0 --mode 0600 "$key" "{{name}}/run/tailscale-authkey"
-  # The box has no need to resolve other tailnet devices, so it keeps its own DNS.
-  sudo incus exec "{{name}}" -- "$guest_bin/tailscale" up \
-    --auth-key=file:/run/tailscale-authkey --hostname="{{name}}" --accept-dns=false
+  # The box keeps its own DNS: it has no need to resolve other tailnet devices.
+  # The agent user is made operator because T3 itself sets up the HTTPS route.
+  printf '%s\n' "$key" | sudo incus exec "{{name}}" -- "$guest_bin/tailscale" up \
+    --auth-key=file:/dev/stdin --hostname="{{name}}" --accept-dns=false --operator=clanker
+  unset key
+  # T3 can only publish itself on the tailnet once the box has joined.
+  sudo incus exec "{{name}}" -- "$guest_bin/systemctl" restart t3-server
   sudo incus exec "{{name}}" -- "$guest_bin/tailscale" status
+  echo "✓ {{name}} joined. Pair the T3 app with it: just flowdora clanker-pair {{name}}"
+
+# The link is valid for a few minutes and for one device. Open it on the machine
+# running the T3 app; the app remembers the box afterwards.
+[doc('Print a one-time link that pairs the T3 app with the server in a box')]
+[group('clanker')]
+[linux]
+clanker-pair name:
+  sudo incus exec "{{name}}" -- su - clanker -c 't3 pair --tailscale'
