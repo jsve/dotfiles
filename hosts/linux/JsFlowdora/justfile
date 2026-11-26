@@ -246,6 +246,8 @@ clanker-publish:
 clanker-update name="": clanker-publish
   #!/usr/bin/env bash
   set -uo pipefail
+  # Without this, Ctrl-C only ends the command in progress and the loop carries on.
+  trap 'echo; echo "Interrupted; the boxes keep whatever they were doing." >&2; exit 130' INT
   # Absolute paths inside the guest: `incus exec` does not give it NixOS's PATH.
   guest_bin=/run/current-system/sw/bin
   names="{{name}}"
