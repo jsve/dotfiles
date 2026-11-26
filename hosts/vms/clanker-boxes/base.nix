@@ -90,11 +90,14 @@ in
   # has no entry for it. A failed build leaves the running system untouched.
   systemd.services.clanker-apply = {
     description = "Apply this box's NixOS configuration from the host's published copy";
-    wantedBy = [ "multi-user.target" ];
+    # Started by the timer below, never as part of booting: a switch made while the
+    # boot is still waiting on this very unit never finishes (it hangs restarting
+    # sysinit-reactivation.target).
     wants = [ "network-online.target" ];
     after = [
       "network-online.target"
       "incus-agent.service" # mounts the share and provides /dev/incus/sock
+      "multi-user.target" # i.e. only once the boot itself is complete
     ];
     # The switch this unit performs must not stop or restart the unit itself.
     restartIfChanged = false;
@@ -126,7 +129,7 @@ in
         exit 0
       fi
 
-      name="$(curl -fsS --unix-socket /dev/incus/sock http://incus/1.0/meta-data \
+      name="$(curl -fsS --max-time 20 --unix-socket /dev/incus/sock http://incus/1.0/meta-data \
         | sed -n 's/^local-hostname: //p')"
       if [[ ! "$name" =~ ^[A-Za-z0-9-]+$ ]]; then
         echo "Could not read this box's instance name from Incus." >&2
@@ -149,6 +152,12 @@ in
       mkdir -p "$(dirname "$applied")"
       echo "$name $revision" > "$applied"
     '';
+  };
+
+  systemd.timers.clanker-apply = {
+    description = "Apply this box's NixOS configuration shortly after boot";
+    wantedBy = [ "timers.target" ];
+    timerConfig.OnBootSec = "15s";
   };
 
   # The Incus image module turns sshd on; the host uses `incus exec` instead.
