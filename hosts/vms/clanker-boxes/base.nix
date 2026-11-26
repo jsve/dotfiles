@@ -115,6 +115,7 @@ in
       pkgs.xz.bin
       pkgs.gzip
       pkgs.gitMinimal
+      pkgs.util-linux # runuser
       config.nix.package.out
       config.system.build.nixos-rebuild
     ];
@@ -149,7 +150,19 @@ in
       target="$(nix eval --raw "$flake#nixosConfigurations" \
         --apply "c: if c ? \"$name\" then \"$name\" else \"clanker-boxes-base\"")"
       echo "Applying $target at revision $revision to $name..."
+
+      # Clean up by count, not by age: a box may be switched off for months. Keep the
+      # running system plus a few to roll back to (five in all once the new one is
+      # added); doing this before the switch also drops their boot-menu entries.
+      nix-env --profile /nix/var/nix/profiles/system --delete-generations +4
+      runuser -u clanker -- nix-env --delete-generations +4 \
+        --profile /home/clanker/.local/state/nix/profiles/home-manager || true
+
       nixos-rebuild switch --flake "$flake#$target"
+
+      # Frees what only the dropped systems needed. It also removes anything else in
+      # the store that nothing points at, such as packages fetched by `nix shell`.
+      nix-store --gc
       mkdir -p "$(dirname "$applied")"
       echo "$name $revision" > "$applied"
     '';
