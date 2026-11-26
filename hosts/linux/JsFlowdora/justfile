@@ -283,26 +283,46 @@ clanker-update name="": clanker-publish
   fi
   echo "✓ Updated:" $names
 
-# The box joins as its own device with the tag tag:clanker, so what it may reach and
-# who may reach it is decided by the tailnet policy, not by a user's login. No key is
+# A box joins as its own device with the tag tag:clanker, so what it may reach and who
+# may reach it is decided by the tailnet policy, not by a user's login. No key is
 # involved: tailscale in the box shows a sign-in link and its QR code, and you approve
 # it from a device that is already signed in to the tailnet as an admin (scan the code
-# with your phone). The command waits until you have done so.
-[doc('Join a running box to the tailnet under its own name; you approve by scanning a QR code')]
+# with your phone). Without a name, every running box that is not on the tailnet yet
+# is joined, one after the other; each waits for its own approval.
+[doc('Join one running box, or all that are not on the tailnet yet; you approve each by scanning a QR code')]
 [group('clanker')]
 [linux]
-clanker-tailnet-join name:
+clanker-tailnet-join name="":
   #!/usr/bin/env bash
   set -euo pipefail
+  trap 'echo; echo "Interrupted." >&2; exit 130' INT
   guest_bin=/run/current-system/sw/bin
-  # The box keeps its own DNS: it has no need to resolve other tailnet devices.
-  # The agent user is made operator because T3 itself sets up the HTTPS route.
-  sudo incus exec "{{name}}" -- "$guest_bin/tailscale" up --qr \
-    --advertise-tags=tag:clanker --hostname="{{name}}" --accept-dns=false --operator=clanker
-  # T3 can only publish itself on the tailnet once the box has joined.
-  sudo incus exec "{{name}}" -- "$guest_bin/systemctl" restart t3-server
-  sudo incus exec "{{name}}" -- "$guest_bin/tailscale" status || true
-  echo "✓ {{name}} joined. If it shows as waiting for approval, approve '{{name}}' on the Machines page."
+  sudo -v
+  joined() {
+    sudo incus exec "$1" -- "$guest_bin/tailscale" status --json 2>/dev/null \
+      | grep -q '"BackendState": *"Running"'
+  }
+  names="{{name}}"
+  if [ -z "$names" ]; then
+    for n in $(sudo incus list --format csv --columns n type=virtual-machine status=running); do
+      if joined "$n"; then echo "$n is already on the tailnet."; else names="$names $n"; fi
+    done
+    if [ -z "$names" ]; then
+      echo "No running box needs joining."
+      exit 0
+    fi
+  fi
+  for n in $names; do
+    echo
+    echo "== $n: check that the approval page names '$n' before you approve"
+    # The box keeps its own DNS: it has no need to resolve other tailnet devices.
+    # The agent user is made operator because T3 itself sets up the HTTPS route.
+    sudo incus exec "$n" -- "$guest_bin/tailscale" up --qr \
+      --advertise-tags=tag:clanker --hostname="$n" --accept-dns=false --operator=clanker
+    # T3 can only publish itself on the tailnet once the box has joined.
+    sudo incus exec "$n" -- "$guest_bin/systemctl" restart t3-server
+    echo "✓ $n joined. If it shows as waiting for approval, approve '$n' on the Machines page."
+  done
 
 # The link is valid for a few minutes and for one device. Open it on the machine
 # running the T3 app; the app remembers the box afterwards.
