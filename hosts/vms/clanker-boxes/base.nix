@@ -79,7 +79,7 @@ in
   environment.variables.T3CODE_TELEMETRY_ENABLED = "false";
 
   # The only way in from outside: the VM joins the tailnet as its own tagged device.
-  # It is not joined at first boot; `just flowdora clanker-tailnet-join` supplies the auth key.
+  # It is not joined at first boot; `just flowdora clanker-tailnet-join` does that.
   services.tailscale.enable = true;
   networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 443 ];
 
