@@ -208,8 +208,18 @@ clanker-image config="clanker-boxes-base":
 [group('clanker')]
 [linux]
 clanker-launch name image="clanker-boxes-base":
+  #!/usr/bin/env bash
+  set -euo pipefail
+  # A new box switches to the published copy within a minute of booting, whatever the
+  # image contains, so say so when that copy is not what is checked out here.
+  published="$(cat /var/lib/clanker-boxes/share/revision 2>/dev/null || true)"
+  head="$(git -C "{{justfile_directory()}}" rev-parse HEAD)"
+  if [ "$published" != "$head" ]; then
+    echo "Note: the published configuration (${published:0:7}) is not this checkout's commit (${head:0:7})."
+    echo "{{name}} will apply the published one. To publish this commit: just flowdora clanker-publish"
+  fi
   sudo incus launch "{{image}}" "{{name}}" --vm --profile clanker-box
-  @echo "Shell as the agent user: sudo incus exec {{name}} -- su - clanker"
+  echo "Shell as the agent user: sudo incus exec {{name}} -- su - clanker"
 
 # Boxes never read this checkout or GitHub. They rebuild themselves from a root-owned
 # copy under /var/lib/clanker-boxes/share, which Incus mounts into them read-only, and
