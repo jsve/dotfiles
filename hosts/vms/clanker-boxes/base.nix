@@ -90,14 +90,15 @@ in
   # has no entry for it. A failed build leaves the running system untouched.
   systemd.services.clanker-apply = {
     description = "Apply this box's NixOS configuration from the host's published copy";
-    # Started by the timer below, never as part of booting: a switch made while the
-    # boot is still waiting on this very unit never finishes (it hangs restarting
-    # sysinit-reactivation.target).
+    # Enabled like any boot service, but ordered after multi-user.target so that it
+    # runs once the boot has finished and nothing in the boot waits for it. Run as a
+    # step of the boot itself, the switch below hung part-way through.
+    wantedBy = [ "multi-user.target" ];
     wants = [ "network-online.target" ];
     after = [
       "network-online.target"
       "incus-agent.service" # mounts the share and provides /dev/incus/sock
-      "multi-user.target" # i.e. only once the boot itself is complete
+      "multi-user.target"
     ];
     # The switch this unit performs must not stop or restart the unit itself.
     restartIfChanged = false;
@@ -152,12 +153,6 @@ in
       mkdir -p "$(dirname "$applied")"
       echo "$name $revision" > "$applied"
     '';
-  };
-
-  systemd.timers.clanker-apply = {
-    description = "Apply this box's NixOS configuration shortly after boot";
-    wantedBy = [ "timers.target" ];
-    timerConfig.OnBootSec = "15s";
   };
 
   # The Incus image module turns sshd on; the host uses `incus exec` instead.
