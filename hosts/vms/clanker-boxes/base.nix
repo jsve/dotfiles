@@ -17,6 +17,8 @@
 let
   # Where the Incus profile mounts the host's published folder, read-only.
   hostShare = "/mnt/host";
+  # T3 Code's headless server, which the desktop app pairs with. Pinned in pkgs/t3-server.
+  t3-server = pkgs.callPackage ../../../pkgs/t3-server { };
 in
 {
   imports = [
@@ -62,9 +64,7 @@ in
     ++ (with pkgs; [
       git
       codex
-      # T3 Code's headless server (`t3 serve`), which the desktop app pairs with. It
-      # finds claude and codex on PATH and uses their own logins. Pinned in pkgs/t3-server.
-      (callPackage ../../../pkgs/t3-server { })
+      t3-server
       # Same signed-manifest pin as home/modules/claude-code.
       (claude-code.override {
         manifest = lib.importJSON ../../../home/modules/claude-code/manifest.json;
@@ -79,8 +79,40 @@ in
   environment.variables.T3CODE_TELEMETRY_ENABLED = "false";
 
   # The only way in from outside: the VM joins the tailnet as its own tagged device.
-  # It is not joined yet at first boot; that needs an auth key supplied at runtime.
+  # It is not joined at first boot; `just flowdora clanker-tailnet-join` does that.
   services.tailscale.enable = true;
+  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 443 ];
+
+  # The T3 server runs as the agent user, finds claude and codex on PATH and uses
+  # their logins in that user's home. It listens on the box itself only and has
+  # Tailscale publish it at https://<box>.<tailnet>.ts.net; until the box has joined
+  # the tailnet it simply runs without that route.
+  systemd.services.t3-server = {
+    description = "T3 Code server";
+    wantedBy = [ "multi-user.target" ];
+    wants = [ "network-online.target" ];
+    after = [
+      "network-online.target"
+      "tailscaled.service"
+    ];
+    # A configuration update must not kill the agent sessions running under this
+    # server; a new T3 version takes effect at the next boot or manual restart.
+    restartIfChanged = false;
+    environment.T3CODE_TELEMETRY_ENABLED = "false";
+    # What the agent user would have in a terminal.
+    path = [
+      "/run/wrappers"
+      "/etc/profiles/per-user/clanker"
+      "/run/current-system/sw"
+    ];
+    serviceConfig = {
+      User = "clanker";
+      WorkingDirectory = "/home/clanker";
+      ExecStart = "${t3-server}/bin/t3 serve --no-browser --tailscale-serve";
+      Restart = "on-failure";
+      RestartSec = 10;
+    };
+  };
 
   # Keeps the box in line with the repo. JsFlowdora publishes a committed copy of this
   # repo into a folder that Incus mounts read-only at ${hostShare}
