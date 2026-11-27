@@ -19,6 +19,8 @@ let
   hostShare = "/mnt/host";
   # T3 Code's headless server, which the desktop app pairs with. Pinned in pkgs/t3-server.
   t3-server = pkgs.callPackage ../../../pkgs/t3-server { };
+  # Local port of the T3 server; the Tailscale route points to it.
+  t3Port = 3773;
 in
 {
   imports = [
@@ -78,15 +80,44 @@ in
   # T3 Code sends usage telemetry by default; this is its documented opt-out.
   environment.variables.T3CODE_TELEMETRY_ENABLED = "false";
 
-  # The only way in from outside: the VM joins the tailnet as its own tagged device.
-  # It is not joined at first boot; `just flowdora clanker-tailnet-join` does that.
+  # Tailnet access. The box is joined by `just flowdora clanker-tailnet-join`.
+  # TODO(verify): no test has run on a box for anything in this section.
   services.tailscale.enable = true;
-  networking.firewall.interfaces.tailscale0.allowedTCPPorts = [ 443 ];
 
-  # The T3 server runs as the agent user, finds claude and codex on PATH and uses
-  # their logins in that user's home. It listens on the box itself only and has
-  # Tailscale publish it at https://<box>.<tailnet>.ts.net; until the box has joined
-  # the tailnet it simply runs without that route.
+  # TODO(verify): no firewall port is opened for Tailscale Serve. A review agent read in
+  # the Tailscale source that tailscaled handles Serve traffic itself, before the
+  # firewall of the box. Not tested. Reference (not pinned to a commit):
+  # https://github.com/tailscale/tailscale/blob/main/wgengine/netstack/netstack.go
+
+  # Makes the HTTPS route from the tailnet to the T3 server. Started by the join recipe
+  # as root, so that the agent user needs no Tailscale operator right.
+  # TODO(verify): that a route made by root stays after a restart of the box.
+  #   Reference: https://tailscale.com/kb/1242/tailscale-serve
+  # TODO(verify): that a user who is not root and not operator cannot change Tailscale
+  #   (up, login, logout, set, serve). Reference (not pinned to a commit):
+  #   https://github.com/tailscale/tailscale/blob/main/ipn/ipnserver/server.go
+  systemd.services.clanker-tailnet-serve = {
+    description = "Publish the T3 server on the tailnet over HTTPS";
+    after = [ "tailscaled.service" ];
+    serviceConfig.Type = "oneshot";
+    # The same command that T3 runs itself when it has the operator right:
+    # https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/packages/tailscale/src/tailscale.ts#L466-L485
+    serviceConfig.ExecStart = "${config.services.tailscale.package}/bin/tailscale serve --bg --https=443 http://127.0.0.1:${toString t3Port}";
+  };
+
+  # The T3 server, as the agent user. T3's own installer (`t3 up`) writes a systemd user
+  # unit; this is a system unit so that NixOS declares it.
+  # TODO(verify): every setting below against the unit that T3 generates:
+  #   https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/cloud/bootService.ts#L109-L150
+  # TODO(verify): that T3 accepts a Tailscale route that it did not make itself, and
+  #   what it does at start with no operator right:
+  #   https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/server.ts#L1043-L1180
+  # TODO(verify): that T3 finds claude, codex and git with no PATH set here. A review
+  #   agent read that T3 takes PATH from the login shell of the user:
+  #   https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/os-jank.ts#L73-L103
+  # TODO(verify): T3's memory-limited group for agents is off in this unit (it needs a
+  #   user session). Decide if that is acceptable:
+  #   https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/process/agentScope.ts#L160-L182
   systemd.services.t3-server = {
     description = "T3 Code server";
     wantedBy = [ "multi-user.target" ];
@@ -95,29 +126,19 @@ in
       "network-online.target"
       "tailscaled.service"
     ];
-    # A configuration update must not kill the agent sessions running under this
-    # server; a new T3 version takes effect at the next boot or manual restart.
+    # TODO(verify): with this, a configuration update does not restart the server and
+    # the agent sessions under it.
     restartIfChanged = false;
     environment.T3CODE_TELEMETRY_ENABLED = "false";
-    # What the agent user would have in a terminal.
-    path = [
-      "/run/wrappers"
-      "/etc/profiles/per-user/clanker"
-      "/run/current-system/sw"
-    ];
-    # T3's own installer (`t3 up`) writes a systemd user unit; this is a system unit so
-    # that NixOS declares it. The settings below are copied from the unit that T3
-    # generates, to keep the same behaviour:
-    # https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/cloud/bootService.ts#L109-L150
     serviceConfig = {
       User = "clanker";
       WorkingDirectory = "/home/clanker";
-      ExecStart = "${t3-server}/bin/t3 serve --no-browser --tailscale-serve";
-      # Agents run in this unit's control group. With the default OOMPolicy=stop, one
-      # agent killed for using too much memory would stop the server and every session.
+      # The port is fixed because the Tailscale route above points to it.
+      ExecStart = "${t3-server}/bin/t3 serve --port ${toString t3Port} --tailscale-serve";
+      # TODO(verify): copied from the T3 unit. Agents run in the control group of this
+      # unit; the T3 source says that OOMPolicy=stop would stop the unit when one of
+      # them is killed for memory use.
       OOMPolicy = "continue";
-      # On stop, signal the server first so it can shut its sessions down; the rest
-      # of the group is only killed if that times out.
       KillMode = "mixed";
       Restart = "always";
       RestartSec = 5;
@@ -212,5 +233,6 @@ in
 
   # The Incus image module turns sshd on; the host uses `incus exec` instead.
   services.openssh.enable = lib.mkForce false;
-  networking.firewall.enable = true; # no inbound ports open
+  # TODO(verify): with no allowed ports listed, the box accepts no inbound connection.
+  networking.firewall.enable = true;
 }

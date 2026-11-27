@@ -262,10 +262,18 @@ clanker-update name="": clanker-publish
   guest_bin=/run/current-system/sw/bin
   names="{{name}}"
   if [ -z "$names" ]; then
-    names="$(sudo incus list --format csv --columns n type=virtual-machine status=running)"
+    # Every box that flake.nix declares and that runs now.
+    declared="$(nix --extra-experimental-features 'nix-command flakes' eval --raw \
+      "{{justfile_directory()}}#nixosConfigurations" \
+      --apply 'c: builtins.concatStringsSep " " (builtins.filter (n: n != "clanker-boxes-base") (builtins.attrNames c))')"
+    running="$(sudo incus list --format csv --columns n status=running)"
+    for n in $declared; do
+      if grep -qx "$n" <<<"$running"; then names="$names $n"; fi
+    done
   fi
   if [ -z "$names" ]; then
-    echo "No running boxes; they will apply the published configuration when they start."
+    echo "No declared box runs. Boxes apply the published configuration when they start."
+    echo "To update a box that flake.nix does not declare, give its name."
     exit 0
   fi
   failed=""
@@ -283,13 +291,18 @@ clanker-update name="": clanker-publish
   fi
   echo "✓ Updated:" $names
 
-# A box joins as its own device with the tag tag:clanker, so what it may reach and who
-# may reach it is decided by the tailnet policy, not by a user's login. No key is
-# involved: tailscale in the box shows a sign-in link and its QR code, and you approve
-# it from a device that is already signed in to the tailnet as an admin (scan the code
-# with your phone). Without a name, every running box that is not on the tailnet yet
-# is joined, one after the other; each waits for its own approval.
-[doc('Join one running box, or all that are not on the tailnet yet; you approve each by scanning a QR code')]
+# Joins boxes to the tailnet as tagged devices, approved by QR code from a device that
+# is signed in to the tailnet as an admin. With no name: every box that flake.nix
+# declares, that runs, and that has not joined.
+# TODO(verify): nothing in this recipe has run.
+# TODO(verify): the flags of `tailscale up` used below, and that a join with a tag
+#   fails when the person who approves is not an owner of the tag.
+#   Reference: https://tailscale.com/kb/1068/tags
+# TODO(verify): the check of the tag after the join (field Self.Tags of
+#   `tailscale status --json`), and that `tailscale logout` removes access at once.
+# TODO(decide): QR sign-in or an auth key that carries the tag. Open question: which
+#   one makes sure that a box can never join with no tag.
+[doc('Join one box, or all declared boxes that have not joined, to the tailnet; you approve each by QR code')]
 [group('clanker')]
 [linux]
 clanker-tailnet-join name="":
@@ -298,36 +311,70 @@ clanker-tailnet-join name="":
   trap 'echo; echo "Interrupted." >&2; exit 130' INT
   guest_bin=/run/current-system/sw/bin
   sudo -v
-  joined() {
-    sudo incus exec "$1" -- "$guest_bin/tailscale" status --json 2>/dev/null \
-      | grep -q '"BackendState": *"Running"'
+  status_json() { sudo incus exec "$1" -- "$guest_bin/tailscale" status --json 2>/dev/null || true; }
+  joined() { local s; s="$(status_json "$1")"; grep -q '"BackendState": *"Running"' <<<"$s"; }
+  tagged() {
+    status_json "$1" | sudo incus exec "$1" -- "$guest_bin/jq" -e '(.Self.Tags // []) | index("tag:clanker") != null' > /dev/null
   }
   names="{{name}}"
   if [ -z "$names" ]; then
-    for n in $(sudo incus list --format csv --columns n type=virtual-machine status=running); do
-      if joined "$n"; then echo "$n is already on the tailnet."; else names="$names $n"; fi
+    declared="$(nix --extra-experimental-features 'nix-command flakes' eval --raw \
+      "{{justfile_directory()}}#nixosConfigurations" \
+      --apply 'c: builtins.concatStringsSep " " (builtins.filter (n: n != "clanker-boxes-base") (builtins.attrNames c))')"
+    running="$(sudo incus list --format csv --columns n status=running)"
+    for n in $declared; do
+      if ! grep -qx "$n" <<<"$running"; then echo "$n is declared but does not run; skipped."
+      elif joined "$n"; then echo "$n is already on the tailnet."
+      else names="$names $n"; fi
     done
     if [ -z "$names" ]; then
-      echo "No running box needs joining."
+      echo "No declared, running box needs joining. To join a box that flake.nix does not declare, give its name."
       exit 0
     fi
   fi
   for n in $names; do
     echo
-    echo "== $n: check that the approval page names '$n' before you approve"
-    # The box keeps its own DNS: it has no need to resolve other tailnet devices.
-    # The agent user is made operator because T3 itself sets up the HTTPS route.
-    sudo incus exec "$n" -- "$guest_bin/tailscale" up --qr \
-      --advertise-tags=tag:clanker --hostname="$n" --accept-dns=false --operator=clanker
-    # T3 can only publish itself on the tailnet once the box has joined.
-    sudo incus exec "$n" -- "$guest_bin/systemctl" restart t3-server
-    echo "✓ $n joined. If it shows as waiting for approval, approve '$n' on the Machines page."
+    if joined "$n"; then
+      echo "== $n is already on the tailnet; not joined again."
+    else
+      echo "== $n: check that the approval page names '$n' before you approve"
+      sudo incus exec "$n" -- "$guest_bin/tailscale" up --qr \
+        --advertise-tags=tag:clanker --hostname="$n" --accept-dns=false
+      new=1
+    fi
+    if ! tagged "$n"; then
+      sudo incus exec "$n" -- "$guest_bin/tailscale" logout || true
+      echo "Error: $n does not have the tag tag:clanker. It was signed out of the tailnet." >&2
+      echo "Remove '$n' on the Machines page of the Tailscale console if it is listed there." >&2
+      exit 1
+    fi
+    sudo incus exec "$n" -- "$guest_bin/systemctl" start clanker-tailnet-serve
+    if [ "${new:-}" = 1 ]; then
+      # TODO(verify): that T3 needs a restart to use the route after a first join.
+      sudo incus exec "$n" -- "$guest_bin/systemctl" restart t3-server
+      new=
+    fi
+    echo "✓ $n is on the tailnet with the tag tag:clanker."
   done
 
-# The link is valid for a few minutes and for one device. Open it on the machine
-# running the T3 app; the app remembers the box afterwards.
+# Prints a one-time link that pairs the T3 app with the server in a box. Run it in your
+# own terminal; do not pass its output through an assistant.
+# TODO(verify): nothing in this recipe has run.
+# TODO(verify): the command and its flags, and that it needs no Tailscale right:
+#   https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/cli/auth.ts#L84-L125
+# TODO(verify): `t3 pair --tailscale` as the alternative, and when it works with no
+#   operator right: https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/cli/pair.ts
 [doc('Print a one-time link that pairs the T3 app with the server in a box')]
 [group('clanker')]
 [linux]
 clanker-t3-pair name:
-  sudo incus exec "{{name}}" -- su - clanker -c 't3 pair --tailscale'
+  #!/usr/bin/env bash
+  set -euo pipefail
+  guest_bin=/run/current-system/sw/bin
+  dns="$(sudo incus exec "{{name}}" -- "$guest_bin/tailscale" status --json \
+    | sudo incus exec "{{name}}" -- "$guest_bin/jq" -r '.Self.DNSName | rtrimstr(".")')"
+  if [[ ! "$dns" =~ ^[A-Za-z0-9.-]+$ ]]; then
+    echo "Error: {{name}} has no tailnet name. Join it first: just flowdora clanker-tailnet-join {{name}}" >&2
+    exit 1
+  fi
+  sudo incus exec "{{name}}" -- su - clanker -c "t3 auth pairing create --base-url https://$dns/"
