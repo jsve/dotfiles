@@ -105,12 +105,22 @@ in
       "/etc/profiles/per-user/clanker"
       "/run/current-system/sw"
     ];
+    # T3's own installer (`t3 up`) writes a systemd user unit; this is a system unit so
+    # that NixOS declares it. The settings below are copied from the unit that T3
+    # generates, to keep the same behaviour:
+    # https://github.com/pingdotgg/t3code/blob/ca81b7b97a1c4b91e5ac25768d0f6629f37732fd/apps/server/src/cloud/bootService.ts#L109-L150
     serviceConfig = {
       User = "clanker";
       WorkingDirectory = "/home/clanker";
       ExecStart = "${t3-server}/bin/t3 serve --no-browser --tailscale-serve";
-      Restart = "on-failure";
-      RestartSec = 10;
+      # Agents run in this unit's control group. With the default OOMPolicy=stop, one
+      # agent killed for using too much memory would stop the server and every session.
+      OOMPolicy = "continue";
+      # On stop, signal the server first so it can shut its sessions down; the rest
+      # of the group is only killed if that times out.
+      KillMode = "mixed";
+      Restart = "always";
+      RestartSec = 5;
     };
   };
 
